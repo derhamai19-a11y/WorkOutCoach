@@ -303,7 +303,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
   </div>
 
   <!-- SETTINGS SCREEN -->
-  <div id="settings-screen" class="screen" style="display:none">
+  <div id="settings-screen" class="screen" style="display:none;overflow-y:scroll;-webkit-overflow-scrolling:touch">
     <div class="screen-hdr">
       <div class="serif" style="font-size:28px">Settings</div>
     </div>
@@ -311,7 +311,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
       <div class="sr"><span style="font-size:15px;font-weight:500">Worker URL</span></div>
       <div style="padding:0 18px 14px"><input class="fi" id="si-url" placeholder="https://your-worker.workers.dev" type="url" autocapitalize="none" autocorrect="off"></div>
       <div class="sr"><span style="font-size:15px;font-weight:500">App Token</span></div>
-      <div style="padding:0 18px 14px"><input class="fi" id="si-token" placeholder="your-secret-token" type="password" autocapitalize="none" autocorrect="off"></div>
+      <div style="padding:0 18px 14px"><input class="fi" id="si-token" placeholder="your-secret-token" type="text" autocapitalize="none" autocorrect="off"></div>
     </div>
     <div class="ss" style="margin:0 20px 16px">
       <div class="sr"><span style="font-size:15px;font-weight:500">Your Name</span></div>
@@ -328,7 +328,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </div>
     </div>
-    <div style="padding:0 20px 40px">
+    <div style="padding:0 20px 120px">
       <button class="btn btn-p" style="width:100%" onclick="saveSettings()">Save Settings</button>
     </div>
   </div>
