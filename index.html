@@ -145,7 +145,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 .send-btn:disabled{opacity:.35;pointer-events:none}
 .send-btn svg{width:18px;height:18px;color:#0a0a0f;stroke-width:2.5}
 .end-session-btn{padding:7px 14px;border-radius:20px;background:rgba(240,112,112,.1);border:1px solid rgba(240,112,112,.3);color:var(--red);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
-.quick-chips{display:flex;gap:6px;padding:8px 12px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0}
+.quick-chips{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--bg)}
 .quick-chips::-webkit-scrollbar{display:none}
 .chip{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .chip:active{background:rgba(200,240,96,.1);border-color:var(--accent);color:var(--accent)}
@@ -233,12 +233,18 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
       <div class="chart-tabs" id="chart-tabs"></div>
       <canvas class="chart-canvas" id="progress-chart"></canvas>
     </div>
+
+    <!-- Session History -->
+    <div class="section-hdr" style="margin-top:4px">
+      <span class="section-title">Session History</span>
+    </div>
+    <div style="padding:0 20px;margin-bottom:20px" id="session-history-list"></div>
   </div>
 
   <!-- SESSION SCREEN -->
-  <div id="session-screen" class="screen" style="display:none;padding-bottom:0">
+  <div id="session-screen" style="display:none;flex-direction:column;height:calc(100vh - calc(60px + env(safe-area-inset-bottom,0px)));position:fixed;top:0;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom,0px))">
     <!-- Pre-session: choose type -->
-    <div class="session-empty" id="session-start">
+    <div class="session-empty" id="session-start" style="padding-top:calc(40px + env(safe-area-inset-top,0px))">
       <div class="session-empty-icon">🏋️</div>
       <div>
         <div class="serif" style="font-size:26px;margin-bottom:6px">Start Session</div>
@@ -262,7 +268,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 
     <!-- Active session: chat -->
     <div class="active-session" id="session-chat" style="display:none">
-      <div class="session-topbar">
+      <div class="session-topbar" style="padding-top:calc(14px + env(safe-area-inset-top,0px))">
         <div>
           <div class="session-title" id="session-title-bar">Push Session</div>
           <div class="session-timer" id="session-timer">0:00</div>
@@ -424,6 +430,18 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
   </div>
 </div>
 
+<!-- Session detail / delete overlay -->
+<div class="ov" id="ov-sessdet" onclick="closeSh('sessdet')"></div>
+<div class="sh" id="sh-sessdet">
+  <div class="sh-handle"></div>
+  <div class="sh-title" id="sessdet-title">Session</div>
+  <div style="padding:0 20px;margin-bottom:16px" id="sessdet-body"></div>
+  <div class="fa-row">
+    <button class="btn btn-s" onclick="closeSh('sessdet')">Close</button>
+    <button class="btn btn-d" id="sessdet-del-btn">Delete Session</button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast-el" id="toast"></div>
 
@@ -538,6 +556,7 @@ function renderHome() {
   renderWeightsList();
   renderReportCard();
   renderChart();
+  renderSessionHistory();
   // Update subtitle
   const s = db.sett();
   const hour = new Date().getHours();
