@@ -1341,6 +1341,61 @@ Keep the tone direct and coaching-focused. No generic advice.`;
   }
 }
 
+// ── SESSION HISTORY & DELETE ──────────────────────────────────────────────────
+function renderSessionHistory() {
+  const el = $('session-history-list');
+  if(!el) return;
+  const sessions = db.sessions().slice().reverse().slice(0, 15);
+  if(!sessions.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0">No sessions logged yet</div>';
+    return;
+  }
+  el.innerHTML = sessions.map(sess => {
+    const typeEmoji = sess.sessionType === 'push' ? '💪' : sess.sessionType === 'pull' ? '🔄' : '⚡';
+    const typeLabel = sess.sessionType === 'custom' ? (sess.customName || 'Custom') : sess.sessionType.charAt(0).toUpperCase() + sess.sessionType.slice(1);
+    const setCount = (sess.sets || []).length;
+    return `<div onclick="openSessionDetail('${sess.id}')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${typeEmoji}</div>
+        <div>
+          <div style="font-size:14px;font-weight:500">${typeLabel}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${fmtDate(sess.date)} · ${setCount} set${setCount !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`;
+  }).join('');
+}
+
+let viewingSessionId = null;
+
+function openSessionDetail(id) {
+  const sess = db.sessions().find(s => s.id === id);
+  if(!sess) return;
+  viewingSessionId = id;
+  const typeLabel = sess.sessionType === 'custom' ? (sess.customName || 'Custom') : sess.sessionType.charAt(0).toUpperCase() + sess.sessionType.slice(1);
+  $('sessdet-title').textContent = typeLabel + ' — ' + fmtDate(sess.date);
+  const sets = sess.sets || [];
+  const setsHtml = sets.length
+    ? sets.map(s => `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span style="color:var(--text2)">${esc(s.exercise)}</span>
+        <span style="font-variant-numeric:tabular-nums">${s.weight}kg × ${s.reps}${s.rpe ? ' <span style=color:var(--text3)>RPE '+s.rpe+'</span>' : ''}</span>
+      </div>`).join('')
+    : '<div style="color:var(--text3);font-size:13px;padding:8px 0">No sets recorded</div>';
+  $('sessdet-body').innerHTML = setsHtml +
+    (sess.summary ? `<div style="font-size:13px;color:var(--text2);line-height:1.5;background:var(--bg3);border-radius:var(--r-sm);padding:12px;margin-top:12px">${esc(sess.summary)}</div>` : '');
+  $('sessdet-del-btn').onclick = () => deleteSession(id);
+  openSh('sessdet');
+}
+
+function deleteSession(id) {
+  if(!confirm('Delete this session? This cannot be undone.')) return;
+  db.saveSessions(db.sessions().filter(s => s.id !== id));
+  closeSh('sessdet');
+  toast('Session deleted');
+  renderHome();
+}
+
 // ── SETTINGS ───────────────────────────────────────────────────────────────
 function renderSettings() {
   const s = db.sett();
