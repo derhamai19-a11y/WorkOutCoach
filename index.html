@@ -122,7 +122,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 .session-topbar{padding:calc(10px + var(--st)) 16px 8px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .session-title{font-size:16px;font-weight:600}
 .session-timer{font-size:13px;color:var(--text2);font-variant-numeric:tabular-nums}
-.chat-area{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+.chat-area{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding:12px 16px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
 .msg{max-width:88%;display:flex;flex-direction:column;gap:3px}
 .msg.coach{align-self:flex-start}
 .msg.user{align-self:flex-end}
@@ -925,6 +925,7 @@ PROGRESSION LOGIC:
 COACHING RULES:
 - Require RPE after every set
 - Confirm every logged set, interpret performance, recommend next set
+- ALWAYS specify weight (kg), target reps, AND target RPE for every next set recommendation — never give weight alone
 - Explain every significant decision briefly
 - Adjust for fatigue or pain signals immediately — skip or reduce load without hesitation
 - Do not add accessory exercises without explicit rationale
@@ -934,12 +935,20 @@ TONE: Direct, calm, supportive, performance-focused.
 Use language like: "Logged.", "Strong set.", "That confirms progress.", "Good decision stopping there.", "Today is a consolidation day.", "Own the weight, don't chase it."
 Never use hype, generic motivation, or robotic responses.
 
-When the user logs a set, format your response as:
+CRITICAL FORMAT — When the user logs a set, ALWAYS respond exactly like this:
 Logged: [Exercise] [weight]kg × [reps] @ RPE [rpe]
-[Brief interpretation]
-Next set: [recommendation]
+[One sentence interpretation]
+Next set: [weight]kg × [rep range] — target RPE [X]
 
-At session end, generate a concise summary with: sets completed, progression notes, milestone flags, recommendation for next session.`;
+Example:
+Logged: Bench Press 24kg × 10 @ RPE 8
+Good set. RPE is dropping at this weight — progress.
+Next set: 24kg × 8–10 — target RPE 8.5
+
+NEVER give a next set recommendation without all three: weight, reps, target RPE.
+NEVER just say "use the same weight" — always state the weight explicitly.
+
+At session end, generate a concise summary with: sets completed, progression notes, any milestones, and specific targets for next session.`;
 }
 
 async function callCoach(systemPrompt, userMessage, isOpening = false) {
@@ -1063,7 +1072,6 @@ function parseAndStoreSet(text) {
 
 async function endSession() {
   if(!confirm('End this session?')) return;
-  clearInterval(sessionTimerInterval);
 
   // Ask coach for summary
   showTyping();
@@ -1076,19 +1084,32 @@ async function endSession() {
   // Store session
   activeSession.summary = summary;
   activeSession.durationMs = Date.now() - sessionStartTime;
-  db.addSession(activeSession);
+  
+  // Ensure session has all required fields before saving
+  const sessionToSave = {
+    id: activeSession.id || genId(),
+    sessionType: activeSession.sessionType || 'custom',
+    customName: activeSession.customName || '',
+    date: activeSession.date || new Date().toISOString(),
+    sets: activeSession.sets || [],
+    readinessNotes: activeSession.readinessNotes || '',
+    summary: activeSession.summary || '',
+    durationMs: activeSession.durationMs || 0
+  };
+  db.addSession(sessionToSave);
+  activeSession = sessionToSave; // keep reference for updateWeightsFromSession
 
   // Update weights from session data
   updateWeightsFromSession();
 
+  // Reset session state and go home immediately
+  activeSession = null;
+  chatHistory = [];
+  clearInterval(sessionTimerInterval);
+  $('session-start').style.display = 'flex';
+  $('session-chat').style.display = 'none';
   toast('Session saved ✓');
-  setTimeout(() => {
-    activeSession = null;
-    chatHistory = [];
-    $('session-start').style.display = 'flex';
-    $('session-chat').style.display = 'none';
-    goTo('home');
-  }, 3000);
+  goTo('home');
 }
 
 function updateWeightsFromSession() {
