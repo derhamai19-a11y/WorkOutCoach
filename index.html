@@ -341,9 +341,13 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
         <input class="fi" id="si-height" placeholder="175" type="number" inputmode="numeric">
       </div>
       <button class="btn btn-p" style="width:100%;margin-bottom:12px" onclick="saveSettings()">Save Settings</button>
-      <button class="btn btn-s" style="width:100%;margin-bottom:80px" onclick="exportData()">
+      <button class="btn btn-s" style="width:100%;margin-bottom:12px" onclick="exportData()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export Data
+      </button>
+      <button class="btn btn-s" style="width:100%;margin-bottom:80px" onclick="importData()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Import Data
       </button>
     </div>
   </div>
@@ -913,42 +917,63 @@ ${pushStructure}
 ${pullStructure}
 ${accessoryPool}
 
+SET STRUCTURE — CRITICAL:
+Every exercise should follow a primer → volume → top set structure. Never repeat the same weight/reps/RPE for every set. Each set has a purpose:
+- Primer set: lighter load or lower reps, RPE 5–6, gets the pattern firing without fatiguing
+- Volume set(s): working weight, moderate reps, RPE 7–8
+- Top set: heaviest or hardest set of the session, RPE 8–9, this is where progress happens
+
+Example Shoulder Press structure:
+- Set 1 (primer): 14kg × 8–10 — target RPE 5–6
+- Set 2 (volume): 14kg × 12–15 — target RPE 7–8
+- Set 3 (top set): 16kg × 7–8 — target RPE 7.5–8.5
+
+Example Bench Press structure:
+- Set 1 (primer): 22kg × 6–8 — target RPE 6
+- Set 2 (volume): 24kg × 8–10 — target RPE 7–8
+- Set 3 (top set): 24kg × 6–8 — target RPE 8.5–9
+
+Adapt this structure based on the athlete's fatigue, readiness, and session history. Fewer sets if fatigued, more if feeling strong.
+
 PROGRESSION LOGIC:
 - A weight is "owned" when: repeated across sessions + stable reps + manageable non-rising RPE
 - Until owned, it is an "exposure" or "test" weight
 - Same reps + lower RPE = progress
-- More reps + same RPE = progress  
+- More reps + same RPE = progress
 - Same weight + rising RPE = fatigue signal
 - Warm-up loads adjust automatically as working weight increases
-- Shoulder press progression is more conservative than bench — limit heavy top sets
+- Shoulder press progression is more conservative than bench
 
 COACHING RULES:
+- Plan the session structure upfront when starting (primer → volume → top set for each exercise)
 - Require RPE after every set
 - Confirm every logged set, interpret performance, recommend next set
-- ALWAYS specify weight (kg), target reps, AND target RPE for every next set recommendation — never give weight alone
-- Explain every significant decision briefly
-- Adjust for fatigue or pain signals immediately — skip or reduce load without hesitation
+- ALWAYS specify weight (kg), target reps, AND target RPE — never give weight alone
+- Adjust immediately for fatigue or pain — skip or reduce without hesitation
 - Do not add accessory exercises without explicit rationale
 - Today's session type: ${type}${customName ? ' ('+customName+')' : ''}
 
-TONE: Direct, calm, supportive, performance-focused.
-Use language like: "Logged.", "Strong set.", "That confirms progress.", "Good decision stopping there.", "Today is a consolidation day.", "Own the weight, don't chase it."
-Never use hype, generic motivation, or robotic responses.
+TONE & FORMAT — CRITICAL:
+Be direct, punchy, encouraging. Like a knowledgeable training partner, not a corporate wellness app.
+Use emojis sparingly at the end of sentences where they earn their place 💪
+No disclaimers. No apologies. No "keep me updated". No generic closing lines.
+Use bold (**text**) for the logged set confirmation and next set recommendation.
+Keep responses to 2–3 short sentences max after the logged confirmation.
 
-CRITICAL FORMAT — When the user logs a set, ALWAYS respond exactly like this:
-Logged: [Exercise] [weight]kg × [reps] @ RPE [rpe]
-[One sentence interpretation]
-Next set: [weight]kg × [rep range] — target RPE [X]
+RESPONSE FORMAT — when user logs a set:
+**Logged: [Exercise] [weight]kg × [reps] @ RPE [rpe]** — [one punchy interpretation sentence with emoji if warranted]
+
+**Next set: [weight]kg × [rep range] — target RPE [X]** [one short motivating line]
 
 Example:
-Logged: Bench Press 24kg × 10 @ RPE 8
-Good set. RPE is dropping at this weight — progress.
-Next set: 24kg × 8–10 — target RPE 8.5
+**Logged: Bench Press 24kg × 10 @ RPE 8** — twice now at this RPE, you're owning it 💪
 
-NEVER give a next set recommendation without all three: weight, reps, target RPE.
-NEVER just say "use the same weight" — always state the weight explicitly.
+**Next set: 24kg × 8–10 — target RPE 8.5.** Let's find that ceiling.
 
-At session end, generate a concise summary with: sets completed, progression notes, any milestones, and specific targets for next session.`;
+NEVER repeat the same weight/reps/RPE for every set — each set must have a purpose and progression.
+NEVER use asterisks in plain text outside of bold formatting.
+
+At session end: concise summary, bold the key numbers, specific targets for next session. No cheerleading sign-off.`;
 }
 
 async function callCoach(systemPrompt, userMessage, isOpening = false) {
@@ -975,12 +1000,18 @@ async function callCoach(systemPrompt, userMessage, isOpening = false) {
   }
 }
 
+function renderMarkdown(text) {
+  return esc(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
 function addCoachMessage(text) {
   chatHistory.push({role:'assistant', content: text});
   const area = $('chat-area');
   const div = document.createElement('div');
   div.className = 'msg coach';
-  div.innerHTML = `<div class="msg-bubble">${esc(text).replace(/\n/g,'<br>')}</div>
+  div.innerHTML = `<div class="msg-bubble">${renderMarkdown(text)}</div>
     <div class="msg-time">${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>`;
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
@@ -1049,24 +1080,57 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-// Parse set data from user message (heuristic)
+// Parse set data from user message — flexible format
+// Handles: "24 x 8 9/10", "24kg x 8 RPE 9", "bench 24 x 8 @9", "24 x 8 8.5"
 function parseAndStoreSet(text) {
   if(!activeSession) return;
-  // Pattern: "Exercise Name\n{weight}kg x {reps}\nRPE {rpe}"
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  if(lines.length < 2) return;
+  const t = text.trim().toLowerCase();
   const allEx = [...PUSH_EXERCISES, ...PULL_EXERCISES, ...ACCESSORY_POOL];
-  const exercise = allEx.find(ex => lines[0].toLowerCase().includes(ex.toLowerCase()));
+
+  // Try to find exercise name in message
+  let exercise = allEx.find(ex => t.includes(ex.toLowerCase()));
+
+  // If no exercise in message, infer from last coach message
+  if(!exercise && chatHistory.length >= 2) {
+    const lastCoach = [...chatHistory].reverse().find(m => m.role === 'assistant');
+    if(lastCoach) {
+      const lc = lastCoach.content.toLowerCase();
+      exercise = allEx.find(ex => lc.includes(ex.toLowerCase()));
+    }
+  }
+
   if(!exercise) return;
-  const weightMatch = text.match(/(\d+(?:\.\d+)?)\s*kg\s*[x×]\s*(\d+)/i);
-  const rpeMatch = text.match(/rpe\s*(\d+(?:\.\d+)?)/i);
-  if(!weightMatch) return;
+
+  // Match weight x reps — with or without kg
+  // Patterns: "24 x 8", "24kg x 8", "24 × 8", "24x8"
+  const weightRepsMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:kg)?\s*[x×]\s*(\d+)/i);
+  if(!weightRepsMatch) return;
+
+  const weight = parseFloat(weightRepsMatch[1]);
+  const reps = parseInt(weightRepsMatch[2]);
+
+  // Match RPE — patterns: "9/10", "RPE 9", "@9", "@9.5", trailing number after reps
+  let rpe = null;
+  const rpeFrac = text.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+  const rpeWord = text.match(/(?:rpe|@)\s*(\d+(?:\.\d+)?)/i);
+  // Trailing number after weight x reps (e.g. "24 x 8 9")
+  const rpeTrail = text.match(/\d+\s*(?:kg)?\s*[x×]\s*\d+\s+(\d+(?:\.\d+)?)(?:\s*$|\/10)/i);
+
+  if(rpeFrac) rpe = parseFloat(rpeFrac[1]);
+  else if(rpeWord) rpe = parseFloat(rpeWord[1]);
+  else if(rpeTrail) rpe = parseFloat(rpeTrail[1]);
+
+  // Sanity checks
+  if(weight < 1 || weight > 300) return;
+  if(reps < 1 || reps > 100) return;
+  if(rpe !== null && (rpe < 1 || rpe > 10)) rpe = null;
+
   activeSession.sets.push({
     exercise,
-    weight: parseFloat(weightMatch[1]),
-    reps: parseInt(weightMatch[2]),
-    rpe: rpeMatch ? parseFloat(rpeMatch[1]) : null,
-    setNumber: activeSession.sets.filter(s=>s.exercise===exercise).length + 1
+    weight,
+    reps,
+    rpe,
+    setNumber: activeSession.sets.filter(s => s.exercise === exercise).length + 1
   });
 }
 
@@ -1427,6 +1491,39 @@ function exportData() {
   a.download = 'workout-coach-backup.json';
   a.click();
   toast('Data exported');
+}
+
+function importData() {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.json';
+  inp.onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if(!d.sessions || !Array.isArray(d.sessions)) throw new Error('Invalid backup file');
+        if(!confirm(`Import ${d.sessions.length} sessions? This will replace all current data.`)) return;
+        db.saveSessions(d.sessions);
+        if(d.settings) {
+          // Preserve current workerUrl and appToken — don't overwrite connection settings
+          const current = db.sett();
+          const imported = {...d.settings, workerUrl: current.workerUrl, appToken: current.appToken};
+          db.saveSett(imported);
+        }
+        if(d.report) db.saveReport(d.report);
+        toast(`Imported ${d.sessions.length} sessions ✓`);
+        renderSettings();
+        goTo('home');
+      } catch(err) {
+        toast('Invalid backup file');
+      }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
 }
 
 // ── AUTO REPORT ────────────────────────────────────────────────────────────
