@@ -216,11 +216,11 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
       <span class="section-title">Log Activity</span>
     </div>
     <div style="padding:0 20px;margin-bottom:20px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch" id="activity-chips-wrap">
-      <button class="chip" style="flex-shrink:0" onclick="quickLogActivity('Spin','spin',45)">🚴 Spin</button>
-      <button class="chip" style="flex-shrink:0" onclick="quickLogActivity('Cricket','cricket',120)">🏏 Cricket</button>
-      <button class="chip" style="flex-shrink:0" onclick="quickLogActivity('Run','run',30)">🏃 Run</button>
-      <button class="chip" style="flex-shrink:0" onclick="quickLogActivity('Walk','walk',45)">🚶 Walk</button>
-      <button class="chip" style="flex-shrink:0" onclick="openCustomActivity()">+ Custom</button>
+      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Spin','spin',45)">🚴 Spin</button>
+      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Cricket','cricket',120)">🏏 Cricket</button>
+      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Run','run',30)">🏃 Run</button>
+      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Walk','walk',45)">🚶 Walk</button>
+      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:rgba(200,240,96,.1);border:1px solid rgba(200,240,96,.3);color:var(--accent);cursor:pointer;white-space:nowrap" onclick="openCustomActivity()">+ Custom</button>
     </div>
     <div id="recent-activities" style="padding:0 20px;margin-bottom:16px"></div>
 
@@ -733,7 +733,7 @@ function renderHome() {
   renderReportCard();
   renderChart();
   renderSessionHistory();
-  renderRecentActivities();
+  try { renderRecentActivities(); } catch(e) { console.warn('Activities render error:', e); }
   // Update subtitle
   const s = db.sett();
   const hour = new Date().getHours();
@@ -789,10 +789,12 @@ function renderMetrics() {
   $('metric-sessions-sub').textContent = prev.length ? `${prev.length} last week` : '';
 
   // Recalc historic TDEE then show rolling average
-  recalcHistoricTDEE();
+  try { recalcHistoricTDEE(); } catch(e) { console.warn('TDEE recalc error:', e); }
   const tdee = calcTDEE();
-  $('metric-tdee').textContent = tdee.toLocaleString();
-  $('metric-steps-label').textContent = getStepsLabel();
+  const tdeeEl = $('metric-tdee');
+  if(tdeeEl) tdeeEl.textContent = tdee.toLocaleString();
+  const stepsEl = $('metric-steps-label');
+  if(stepsEl) stepsEl.textContent = getStepsLabel();
 
   // Persist TDEE
   const s = db.sett(); s.tdee = tdee; db.saveSett(s);
