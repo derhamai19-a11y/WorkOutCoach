@@ -204,12 +204,25 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
         <div class="metric-lbl">Sessions this week</div>
         <div class="metric-sub" id="metric-sessions-sub"></div>
       </div>
-      <div class="metric-card">
+      <div class="metric-card" onclick="openStepsUpload()" style="cursor:pointer">
         <div class="metric-val" id="metric-tdee" style="color:var(--accent2)">–</div>
-        <div class="metric-lbl">Est. TDEE</div>
-        <div class="metric-sub">kcal/day</div>
+        <div class="metric-lbl">Est. TDEE · 7-day avg</div>
+        <div class="metric-sub" id="metric-steps-label" style="color:var(--accent2);opacity:.7">Tap to update steps</div>
       </div>
     </div>
+
+    <!-- Activity log quick add -->
+    <div class="section-hdr">
+      <span class="section-title">Log Activity</span>
+    </div>
+    <div style="padding:0 20px;margin-bottom:20px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch" id="activity-chips-wrap">
+      <button class="chip" style="flex-shrink:0" onclick="quickLogActivity('Spin','spin',45)">🚴 Spin</button>
+      <button class="chip" style="flex-shrink:0" onclick="quickLogActivity('Cricket','cricket',120)">🏏 Cricket</button>
+      <button class="chip" style="flex-shrink:0" onclick="quickLogActivity('Run','run',30)">🏃 Run</button>
+      <button class="chip" style="flex-shrink:0" onclick="quickLogActivity('Walk','walk',45)">🚶 Walk</button>
+      <button class="chip" style="flex-shrink:0" onclick="openCustomActivity()">+ Custom</button>
+    </div>
+    <div id="recent-activities" style="padding:0 20px;margin-bottom:16px"></div>
 
     <!-- Working weights -->
     <div class="section-hdr">
@@ -446,6 +459,54 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
   </div>
 </div>
 
+<!-- Steps upload overlay -->
+<div class="ov" id="ov-steps" onclick="closeSh('steps')"></div>
+<div class="sh" id="sh-steps">
+  <div class="sh-handle"></div>
+  <div class="sh-title">Upload Steps</div>
+  <div style="padding:0 20px 8px;color:var(--text2);font-size:13px;line-height:1.5">Take a screenshot of your Apple Health steps screen (weekly view) and upload it. The AI will read the daily step counts automatically.</div>
+  <div class="fg-wrap" style="margin-top:12px">
+    <label class="fl">Steps Screenshot</label>
+    <div id="steps-photo-wrap">
+      <div class="pd" onclick="selectStepsPhoto()" id="steps-photo-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span style="font-size:13px">Tap to select screenshot</span>
+      </div>
+    </div>
+  </div>
+  <div class="fg-wrap" id="steps-manual-wrap" style="display:none">
+    <label class="fl">Or enter 7-day average manually</label>
+    <input class="fi" id="steps-manual-input" type="number" inputmode="numeric" placeholder="e.g. 8500">
+  </div>
+  <div class="fa-row">
+    <button class="btn btn-s" onclick="closeSh('steps')">Cancel</button>
+    <button class="btn btn-p" id="steps-submit-btn" onclick="submitSteps()">Save Steps</button>
+  </div>
+</div>
+
+<!-- Custom activity overlay -->
+<div class="ov" id="ov-activity" onclick="closeSh('activity')"></div>
+<div class="sh" id="sh-activity">
+  <div class="sh-handle"></div>
+  <div class="sh-title">Log Activity</div>
+  <div class="fg-wrap">
+    <label class="fl">Activity Name</label>
+    <input class="fi" id="act-name" placeholder="e.g. Tennis, Cycling, Swimming" type="text">
+  </div>
+  <div class="fg-wrap">
+    <label class="fl">Duration (minutes)</label>
+    <input class="fi" id="act-duration" type="number" inputmode="numeric" placeholder="e.g. 45">
+  </div>
+  <div class="fg-wrap">
+    <label class="fl">Date</label>
+    <input class="fi" id="act-date" type="date">
+  </div>
+  <div class="fa-row">
+    <button class="btn btn-s" onclick="closeSh('activity')">Cancel</button>
+    <button class="btn btn-p" onclick="saveCustomActivity()">Log Activity</button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast-el" id="toast"></div>
 
@@ -456,6 +517,9 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 const SK = 'wc_settings';
 const SESSION_KEY = 'wc_sessions';
 const REPORT_KEY = 'wc_report';
+const DAILY_KEY = 'wc_daily';
+const STEPS_KEY = 'wc_steps';
+const ACTIVITY_KEY = 'wc_activities';
 
 const DEFAULT_WEIGHTS = {
   'Bench Press': {kg: 24, status: 'working'},
@@ -494,7 +558,17 @@ const db = {
   saveSessions(s) { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); },
   addSession(s) { const all = db.sessions(); all.push(s); db.saveSessions(all); },
   report() { try { return JSON.parse(localStorage.getItem(REPORT_KEY) || 'null'); } catch(e) { return null; } },
-  saveReport(r) { localStorage.setItem(REPORT_KEY, JSON.stringify(r)); }
+  saveReport(r) { localStorage.setItem(REPORT_KEY, JSON.stringify(r)); },
+  // Daily log: {date, steps_actual, steps_assumed, bmr, training_kcal, activity_kcal, tdee}
+  dailyLog() { try { return JSON.parse(localStorage.getItem(DAILY_KEY) || '{}'); } catch(e) { return {}; } },
+  saveDailyLog(d) { localStorage.setItem(DAILY_KEY, JSON.stringify(d)); },
+  // Steps uploads: [{uploadedAt, weekAvg, days: [{date, steps}]}]
+  stepsUploads() { try { return JSON.parse(localStorage.getItem(STEPS_KEY) || '[]'); } catch(e) { return []; } },
+  saveStepsUploads(s) { localStorage.setItem(STEPS_KEY, JSON.stringify(s)); },
+  // Activities: [{id, date, type, name, durationMins, kcal}]
+  activities() { try { return JSON.parse(localStorage.getItem(ACTIVITY_KEY) || '[]'); } catch(e) { return []; } },
+  saveActivities(a) { localStorage.setItem(ACTIVITY_KEY, JSON.stringify(a)); },
+  addActivity(a) { const all = db.activities(); all.push(a); db.saveActivities(all); }
 };
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -533,24 +607,122 @@ function goTo(screen) {
 function openSh(n) { $('ov-'+n).classList.add('open'); setTimeout(()=>$('sh-'+n).classList.add('open'),10); }
 function closeSh(n) { $('sh-'+n).classList.remove('open'); setTimeout(()=>$('ov-'+n).classList.remove('open'),320); }
 
-// ── BMR / TDEE ─────────────────────────────────────────────────────────────
+// ── BMR / TDEE ENGINE ─────────────────────────────────────────────────────
 function calcBMR(s) {
-  // Mifflin-St Jeor
+  // Mifflin-St Jeor male
   return Math.round(10 * s.weight + 6.25 * s.height - 5 * s.age + 5);
 }
 
-function calcTDEE() {
+// Steps → kcal (approximate: 0.04 kcal per step for ~80kg person)
+function stepsToKcal(steps) { return Math.round(steps * 0.04); }
+
+// Training session kcal estimate based on duration and type
+function sessionToKcal(sess) {
+  const mins = sess.durationMs ? Math.round(sess.durationMs / 60000) : 45;
+  const type = (sess.sessionType || '').toLowerCase();
+  // Strength: ~6 kcal/min, cardio/spin: ~9 kcal/min, other: ~5 kcal/min
+  const rate = (type === 'push' || type === 'pull') ? 6 : type === 'spin' ? 9 : 5;
+  return Math.round(mins * rate);
+}
+
+// Activity kcal estimate based on type and duration
+function activityToKcal(act) {
+  const type = (act.name || act.type || '').toLowerCase();
+  const mins = act.durationMins || 30;
+  if(type.includes('spin') || type.includes('cycle') || type.includes('bike')) return Math.round(mins * 9);
+  if(type.includes('cricket') || type.includes('tennis') || type.includes('sport')) return Math.round(mins * 6);
+  if(type.includes('run') || type.includes('jog')) return Math.round(mins * 10);
+  if(type.includes('walk')) return Math.round(mins * 4);
+  return Math.round(mins * 5); // default moderate activity
+}
+
+// Get assumed steps for a date (last available 7-day average)
+function getStepsForDate(dateStr) {
+  const uploads = db.stepsUploads();
+  if(!uploads.length) return null;
+  // Find the most recent upload on or before this date
+  const d = new Date(dateStr).getTime();
+  const relevant = uploads.filter(u => new Date(u.uploadedAt).getTime() <= d + 86400000);
+  if(!relevant.length) return null;
+  const latest = relevant[relevant.length - 1];
+  // Check if there's an actual reading for this date
+  const actual = (latest.days || []).find(day => day.date === dateStr);
+  if(actual) return { steps: actual.steps, source: 'actual' };
+  return { steps: latest.weekAvg, source: 'assumed' };
+}
+
+// Calculate and store TDEE for a specific date
+function calcDailyTDEE(dateStr) {
   const s = db.sett();
   const bmr = calcBMR(s);
-  // Count sessions in last 7 days
-  const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
-  const recentSessions = db.sessions().filter(s => new Date(s.date).getTime() > cutoff);
-  const sessionsPerWeek = recentSessions.length;
-  // Activity multiplier
-  let mult = 1.375; // lightly active baseline
-  if(sessionsPerWeek >= 5) mult = 1.725;
-  else if(sessionsPerWeek >= 3) mult = 1.55;
-  return Math.round(bmr * mult);
+  const dailyBMR = Math.round(bmr / 1); // full day
+
+  // Steps
+  const stepsData = getStepsForDate(dateStr);
+  const stepsKcal = stepsData ? stepsToKcal(stepsData.steps) : stepsToKcal(8000); // default 8000
+
+  // Training sessions on this date
+  const sessions = db.sessions().filter(sess => {
+    return new Date(sess.date).toDateString() === new Date(dateStr).toDateString();
+  });
+  const trainingKcal = sessions.reduce((sum, sess) => sum + sessionToKcal(sess), 0);
+
+  // Activities on this date
+  const activities = db.activities().filter(act => {
+    return new Date(act.date).toDateString() === new Date(dateStr).toDateString();
+  });
+  const activityKcal = activities.reduce((sum, act) => sum + activityToKcal(act), 0);
+
+  const tdee = dailyBMR + stepsKcal + trainingKcal + activityKcal;
+
+  // Store in daily log
+  const log = db.dailyLog();
+  log[dateStr] = {
+    date: dateStr,
+    bmr: dailyBMR,
+    steps: stepsData ? stepsData.steps : 8000,
+    stepsSource: stepsData ? stepsData.source : 'default',
+    stepsKcal,
+    trainingKcal,
+    activityKcal,
+    tdee
+  };
+  db.saveDailyLog(log);
+  return tdee;
+}
+
+// Recalculate last 30 days of TDEE
+function recalcHistoricTDEE() {
+  for(let i = 0; i < 30; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    calcDailyTDEE(d.toDateString());
+  }
+}
+
+// Rolling 7-day average TDEE
+function calcTDEE() {
+  const log = db.dailyLog();
+  const entries = [];
+  for(let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toDateString();
+    if(log[key]) entries.push(log[key].tdee);
+  }
+  if(entries.length) return Math.round(entries.reduce((a,b) => a+b, 0) / entries.length);
+  // Fallback: BMR-based estimate
+  const s = db.sett();
+  return Math.round(calcBMR(s) * 1.5);
+}
+
+// Steps label for home screen
+function getStepsLabel() {
+  const uploads = db.stepsUploads();
+  if(!uploads.length) return 'No steps data';
+  const latest = uploads[uploads.length - 1];
+  const daysAgo = Math.floor((Date.now() - new Date(latest.uploadedAt).getTime()) / 86400000);
+  return `~${latest.weekAvg.toLocaleString()} steps/day${daysAgo > 0 ? ' ('+daysAgo+'d ago)' : ''}`;
 }
 
 // ── HOME ───────────────────────────────────────────────────────────────────
@@ -561,6 +733,7 @@ function renderHome() {
   renderReportCard();
   renderChart();
   renderSessionHistory();
+  renderRecentActivities();
   // Update subtitle
   const s = db.sett();
   const hour = new Date().getHours();
@@ -615,8 +788,11 @@ function renderMetrics() {
   const prev = sessions.filter(s => { const t = new Date(s.date).getTime(); return t > weekAgo - 7*24*3600*1000 && t <= weekAgo; });
   $('metric-sessions-sub').textContent = prev.length ? `${prev.length} last week` : '';
 
+  // Recalc historic TDEE then show rolling average
+  recalcHistoricTDEE();
   const tdee = calcTDEE();
   $('metric-tdee').textContent = tdee.toLocaleString();
+  $('metric-steps-label').textContent = getStepsLabel();
 
   // Persist TDEE
   const s = db.sett(); s.tdee = tdee; db.saveSett(s);
@@ -677,94 +853,125 @@ function setChartEx(ex) {
 
 function drawChart() {
   const canvas = $('progress-chart');
-  const ctx = canvas.getContext('2d');
+  if(!canvas) return;
+  // Force layout first
+  const W = canvas.offsetWidth || 320;
+  const H = 160;
   const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  const W = rect.width, H = rect.height;
   ctx.clearRect(0,0,W,H);
 
-  const sessions = db.sessions();
+  // Gather data points from all sessions for this exercise
+  const sessions = db.sessions().slice().sort((a,b) => new Date(a.date) - new Date(b.date));
   const points = [];
   sessions.forEach(sess => {
-    if(!sess.sets) return;
-    const exSets = sess.sets.filter(s => s.exercise === chartExercise);
-    if(!exSets.length) return;
-    const maxWeight = Math.max(...exSets.map(s => s.weight));
-    points.push({date: new Date(sess.date), weight: maxWeight});
+    const sets = (sess.sets || []).filter(s => s.exercise === chartExercise);
+    if(!sets.length) return;
+    const maxWeight = Math.max(...sets.map(s => Number(s.weight) || 0));
+    const topSet = sets.reduce((best, s) => (!best || s.weight > best.weight) ? s : best, null);
+    const topReps = topSet ? (Number(topSet.reps) || 0) : 0;
+    if(maxWeight > 0) points.push({date: new Date(sess.date), weight: maxWeight, reps: topReps});
   });
 
-  if(points.length < 2) {
+  if(points.length < 1) {
     ctx.fillStyle = 'rgba(144,144,168,0.4)';
     ctx.font = '13px DM Sans, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Not enough data yet — keep training!', W/2, H/2);
+    ctx.fillText('No data yet for ' + chartExercise.split(' ')[0], W/2, H/2);
     return;
   }
 
-  const PAD = {t:14,r:16,b:28,l:36};
+  if(points.length === 1) {
+    // Single point — show it
+    ctx.fillStyle = 'rgba(144,144,168,0.4)';
+    ctx.font = '12px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(points[0].weight + 'kg × ' + points[0].reps + ' reps', W/2, H/2 - 10);
+    ctx.fillText(points[0].date.toLocaleDateString('en-GB',{day:'numeric',month:'short'}), W/2, H/2 + 10);
+    return;
+  }
+
+  const PAD = {t:20,r:50,b:32,l:40};
   const cW = W - PAD.l - PAD.r;
   const cH = H - PAD.t - PAD.b;
+
   const weights = points.map(p => p.weight);
-  const minW = Math.min(...weights) - 2;
-  const maxW = Math.max(...weights) + 2;
-  const xStep = cW / (points.length - 1);
+  const reps = points.map(p => p.reps);
+  const minW = Math.min(...weights) - 2, maxW = Math.max(...weights) + 2;
+  const minR = Math.max(0, Math.min(...reps) - 2), maxR = Math.max(...reps) + 2;
 
+  const xStep = points.length > 1 ? cW / (points.length - 1) : cW;
   const toX = i => PAD.l + i * xStep;
-  const toY = w => PAD.t + cH - ((w - minW) / (maxW - minW)) * cH;
+  const toYw = w => PAD.t + cH - ((w - minW) / (maxW - minW || 1)) * cH;
+  const toYr = r => PAD.t + cH - ((r - minR) / (maxR - minR || 1)) * cH;
 
-  // Grid lines
-  ctx.strokeStyle = 'rgba(42,42,58,0.8)';
+  // Grid
+  ctx.strokeStyle = 'rgba(42,42,58,0.6)';
   ctx.lineWidth = 1;
   [0, 0.5, 1].forEach(f => {
     const y = PAD.t + cH * (1 - f);
     ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + cW, y); ctx.stroke();
   });
 
-  // Gradient fill
-  const grad = ctx.createLinearGradient(0, PAD.t, 0, PAD.t + cH);
-  grad.addColorStop(0, 'rgba(200,240,96,0.25)');
-  grad.addColorStop(1, 'rgba(200,240,96,0)');
+  // Weight line (green)
+  const gradW = ctx.createLinearGradient(0, PAD.t, 0, PAD.t + cH);
+  gradW.addColorStop(0, 'rgba(200,240,96,0.2)');
+  gradW.addColorStop(1, 'rgba(200,240,96,0)');
   ctx.beginPath();
-  ctx.moveTo(toX(0), toY(points[0].weight));
-  points.forEach((p, i) => { if(i > 0) ctx.lineTo(toX(i), toY(p.weight)); });
-  ctx.lineTo(toX(points.length-1), PAD.t + cH);
-  ctx.lineTo(toX(0), PAD.t + cH);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
+  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toYw(p.weight)) : ctx.lineTo(toX(i),toYw(p.weight)));
+  ctx.lineTo(toX(points.length-1), PAD.t+cH);
+  ctx.lineTo(toX(0), PAD.t+cH);
+  ctx.closePath(); ctx.fillStyle = gradW; ctx.fill();
 
-  // Line
   ctx.beginPath();
-  ctx.strokeStyle = '#c8f060';
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  points.forEach((p, i) => { i === 0 ? ctx.moveTo(toX(i), toY(p.weight)) : ctx.lineTo(toX(i), toY(p.weight)); });
+  ctx.strokeStyle = '#c8f060'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toYw(p.weight)) : ctx.lineTo(toX(i),toYw(p.weight)));
   ctx.stroke();
 
-  // Dots
-  points.forEach((p, i) => {
-    ctx.beginPath();
-    ctx.arc(toX(i), toY(p.weight), 3.5, 0, Math.PI*2);
-    ctx.fillStyle = '#c8f060';
-    ctx.fill();
+  // Reps line (blue, dashed)
+  ctx.beginPath();
+  ctx.strokeStyle = '#60c8f0'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+  ctx.setLineDash([4,3]);
+  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toYr(p.reps)) : ctx.lineTo(toX(i),toYr(p.reps)));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dots — weight
+  points.forEach((p,i) => {
+    ctx.beginPath(); ctx.arc(toX(i), toYw(p.weight), 3, 0, Math.PI*2);
+    ctx.fillStyle = '#c8f060'; ctx.fill();
+  });
+  // Dots — reps
+  points.forEach((p,i) => {
+    ctx.beginPath(); ctx.arc(toX(i), toYr(p.reps), 3, 0, Math.PI*2);
+    ctx.fillStyle = '#60c8f0'; ctx.fill();
   });
 
-  // Y labels
-  ctx.fillStyle = 'rgba(144,144,168,0.7)';
-  ctx.font = '10px DM Sans, sans-serif';
-  ctx.textAlign = 'right';
-  [minW+2, maxW-2].forEach(w => {
-    ctx.fillText(w+'kg', PAD.l - 4, toY(w) + 3);
-  });
+  // Y labels left (weight)
+  ctx.fillStyle = '#c8f060'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText(Math.round(minW+2)+'kg', PAD.l-4, toYw(minW+2)+3);
+  ctx.fillText(Math.round(maxW-2)+'kg', PAD.l-4, toYw(maxW-2)+3);
 
-  // X labels (first and last)
-  ctx.textAlign = 'center';
+  // Y labels right (reps)
+  ctx.fillStyle = '#60c8f0'; ctx.textAlign = 'left';
+  ctx.fillText(Math.round(minR+2)+'r', PAD.l+cW+4, toYr(minR+2)+3);
+  ctx.fillText(Math.round(maxR-2)+'r', PAD.l+cW+4, toYr(maxR-2)+3);
+
+  // X labels
+  ctx.fillStyle = 'rgba(144,144,168,0.6)'; ctx.textAlign = 'center';
   const opts = {day:'numeric',month:'short'};
-  ctx.fillText(points[0].date.toLocaleDateString('en-GB',opts), toX(0), H - 4);
-  ctx.fillText(points[points.length-1].date.toLocaleDateString('en-GB',opts), toX(points.length-1), H - 4);
+  ctx.fillText(points[0].date.toLocaleDateString('en-GB',opts), toX(0), H-4);
+  if(points.length > 1) ctx.fillText(points[points.length-1].date.toLocaleDateString('en-GB',opts), toX(points.length-1), H-4);
+
+  // Legend
+  ctx.fillStyle = '#c8f060'; ctx.textAlign = 'left'; ctx.font = '9px DM Sans,sans-serif';
+  ctx.fillText('── Weight', PAD.l, PAD.t - 6);
+  ctx.fillStyle = '#60c8f0';
+  ctx.fillText('- - Reps', PAD.l + 60, PAD.t - 6);
 }
 
 // ── WEIGHTS SHEET ──────────────────────────────────────────────────────────
@@ -954,26 +1161,32 @@ COACHING RULES:
 - Today's session type: ${type}${customName ? ' ('+customName+')' : ''}
 
 TONE & FORMAT — CRITICAL:
-Be direct, punchy, encouraging. Like a knowledgeable training partner, not a corporate wellness app.
-Use emojis sparingly at the end of sentences where they earn their place 💪
-No disclaimers. No apologies. No "keep me updated". No generic closing lines.
-Use bold (**text**) for the logged set confirmation and next set recommendation.
-Keep responses to 2–3 short sentences max after the logged confirmation.
+You are a knowledgeable training partner. Direct, punchy, encouraging — like a mate who really knows their stuff.
+Use emojis sparingly at the end of sentences only where they genuinely add energy 💪
+NEVER use corporate wellness language. No disclaimers. No apologies. No "keep me updated". No "let's ensure safe progression". No generic closing lines like "keep strong and steady".
+Bold (**text**) the logged confirmation and next set recommendation. Nothing else.
+2 short paragraphs max per response. First paragraph: logged + interpretation. Second: next set.
+
+SESSION OPENING: Be brief. One sentence greeting max, then straight into the session structure. 
+Good: "Pull day. Here's the plan:" then list structure.
+Bad: "Great! Let's dive into the pull session with strategy and focus."
 
 RESPONSE FORMAT — when user logs a set:
-**Logged: [Exercise] [weight]kg × [reps] @ RPE [rpe]** — [one punchy interpretation sentence with emoji if warranted]
+**Logged: [Exercise] [weight]kg × [reps] @ RPE [rpe]** — [punchy one-liner, emoji only if earned]
 
-**Next set: [weight]kg × [rep range] — target RPE [X]** [one short motivating line]
+**Next set: [weight]kg × [rep range] — target RPE [X].** [one short line max — optional]
 
-Example:
-**Logged: Bench Press 24kg × 10 @ RPE 8** — twice now at this RPE, you're owning it 💪
+Example good response:
+**Logged: Bench Press 24kg × 10 @ RPE 8** — RPE dropping, you're owning this weight 💪
 
-**Next set: 24kg × 8–10 — target RPE 8.5.** Let's find that ceiling.
+**Next set: 24kg × 8–10 — target RPE 8.5.** Let's find the ceiling.
 
-NEVER repeat the same weight/reps/RPE for every set — each set must have a purpose and progression.
-NEVER use asterisks in plain text outside of bold formatting.
+Example bad response to avoid:
+"Excellent work! The lower than anticipated RPE indicates you're handling this weight well. Let's continue with the same parameters to ensure safe consolidation. Keep me updated after each set!"
 
-At session end: concise summary, bold the key numbers, specific targets for next session. No cheerleading sign-off.`;
+NEVER repeat the same weight/reps/RPE for every set.
+NEVER use asterisks outside of bold formatting.
+At session end: bold key numbers, specific targets for next session. No sign-off line.`;
 }
 
 async function callCoach(systemPrompt, userMessage, isOpening = false) {
@@ -1087,15 +1300,28 @@ function parseAndStoreSet(text) {
   const t = text.trim().toLowerCase();
   const allEx = [...PUSH_EXERCISES, ...PULL_EXERCISES, ...ACCESSORY_POOL];
 
-  // Try to find exercise name in message
+  // Try to find known exercise name in message
   let exercise = allEx.find(ex => t.includes(ex.toLowerCase()));
 
-  // If no exercise in message, infer from last coach message
+  // If no known exercise in message, infer from last coach message
   if(!exercise && chatHistory.length >= 2) {
     const lastCoach = [...chatHistory].reverse().find(m => m.role === 'assistant');
     if(lastCoach) {
       const lc = lastCoach.content.toLowerCase();
       exercise = allEx.find(ex => lc.includes(ex.toLowerCase()));
+      // Also check for custom exercises mentioned by coach
+      if(!exercise) {
+        const coachMatch = lastCoach.content.match(/(?:logged:|next set:|start with|proceed to|move to)\s+([A-Z][a-zA-Z\s]+?)(?:\s+\d|\s*[-–]|\s*$)/m);
+        if(coachMatch) exercise = coachMatch[1].trim();
+      }
+    }
+  }
+
+  // If still no exercise, try to extract from message itself (free-form)
+  if(!exercise) {
+    const weightMatch2 = text.match(/^([a-zA-Z\s]+?)\s+\d/);
+    if(weightMatch2 && weightMatch2[1].trim().length > 2) {
+      exercise = weightMatch2[1].trim();
     }
   }
 
@@ -1460,6 +1686,151 @@ function deleteSession(id) {
   renderHome();
 }
 
+// ── STEPS UPLOAD ──────────────────────────────────────────────────────────
+let stepsPhotoB64 = null;
+
+function openStepsUpload() {
+  stepsPhotoB64 = null;
+  $('steps-manual-wrap').style.display = 'none';
+  $('steps-manual-input').value = '';
+  const wrap = $('steps-photo-wrap');
+  wrap.innerHTML = `<div class="pd" onclick="selectStepsPhoto()" id="steps-photo-btn">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    <span style="font-size:13px">Tap to select screenshot</span>
+  </div>`;
+  openSh('steps');
+}
+
+function selectStepsPhoto() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = e => {
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      stepsPhotoB64 = ev.target.result.split(',')[1];
+      $('steps-photo-wrap').innerHTML = `<img src="${ev.target.result}" style="width:100%;border-radius:var(--r-sm);border:1px solid var(--border);margin-bottom:8px">
+        <div style="font-size:12px;color:var(--accent);text-align:center">Photo selected ✓ — or enter average manually below</div>`;
+      $('steps-manual-wrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+
+async function submitSteps() {
+  const manualVal = parseInt($('steps-manual-input').value);
+  const btn = $('steps-submit-btn');
+  
+  // If manual value provided, use it directly
+  if(manualVal && manualVal > 0) {
+    saveStepsData(manualVal, []);
+    return;
+  }
+
+  // If photo provided, send to AI to read
+  if(stepsPhotoB64) {
+    const s = db.sett();
+    if(!s.workerUrl || !s.appToken) { toast('Configure Worker URL in Settings'); return; }
+    btn.disabled = true; btn.textContent = 'Reading…';
+    try {
+      const res = await fetch(`${s.workerUrl}/steps`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-App-Token': s.appToken},
+        body: JSON.stringify({image_b64: stepsPhotoB64})
+      });
+      const data = await res.json();
+      if(data.ok && data.weekAvg) {
+        saveStepsData(data.weekAvg, data.days || []);
+      } else {
+        // Fallback: ask user to enter manually
+        $('steps-manual-wrap').style.display = 'block';
+        toast('Could not read screenshot — please enter manually');
+      }
+    } catch(e) {
+      $('steps-manual-wrap').style.display = 'block';
+      toast('Error reading screenshot — please enter manually');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Save Steps';
+    }
+    return;
+  }
+
+  toast('Please select a screenshot or enter steps manually');
+}
+
+function saveStepsData(weekAvg, days) {
+  const uploads = db.stepsUploads();
+  uploads.push({ uploadedAt: new Date().toISOString(), weekAvg, days });
+  db.saveStepsUploads(uploads);
+  recalcHistoricTDEE();
+  closeSh('steps');
+  toast(`Steps saved: ~${weekAvg.toLocaleString()}/day ✓`);
+  renderMetrics();
+}
+
+// ── ACTIVITY LOG ──────────────────────────────────────────────────────────
+function quickLogActivity(name, type, durationMins) {
+  const kcal = activityToKcal({name, durationMins});
+  db.addActivity({
+    id: genId(),
+    date: new Date().toISOString(),
+    type, name, durationMins, kcal
+  });
+  recalcHistoricTDEE();
+  renderMetrics();
+  renderRecentActivities();
+  toast(`${name} logged — ~${kcal} kcal ✓`);
+}
+
+function openCustomActivity() {
+  $('act-name').value = '';
+  $('act-duration').value = '';
+  $('act-date').value = new Date().toISOString().slice(0,10);
+  openSh('activity');
+}
+
+function saveCustomActivity() {
+  const name = $('act-name').value.trim();
+  const duration = parseInt($('act-duration').value) || 30;
+  const date = $('act-date').value;
+  if(!name) { toast('Enter activity name'); return; }
+  const kcal = activityToKcal({name, durationMins: duration});
+  db.addActivity({
+    id: genId(),
+    date: date ? new Date(date).toISOString() : new Date().toISOString(),
+    type: 'custom', name, durationMins: duration, kcal
+  });
+  recalcHistoricTDEE();
+  closeSh('activity');
+  renderMetrics();
+  renderRecentActivities();
+  toast(`${name} logged — ~${kcal} kcal ✓`);
+}
+
+function renderRecentActivities() {
+  const el = $('recent-activities');
+  if(!el) return;
+  const acts = db.activities().slice().reverse().slice(0, 5);
+  if(!acts.length) { el.innerHTML = ''; return; }
+  el.innerHTML = acts.map(a => {
+    const emoji = a.name.toLowerCase().includes('spin') || a.name.toLowerCase().includes('cycl') ? '🚴'
+      : a.name.toLowerCase().includes('cricket') ? '🏏'
+      : a.name.toLowerCase().includes('run') ? '🏃'
+      : a.name.toLowerCase().includes('walk') ? '🚶' : '⚡';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">${emoji}</span>
+        <div>
+          <div style="font-size:13px;font-weight:500">${esc(a.name)}</div>
+          <div style="font-size:11px;color:var(--text3)">${fmtDate(a.date)} · ${a.durationMins}min</div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--accent3)">~${a.kcal} kcal</div>
+    </div>`;
+  }).join('');
+}
+
 // ── SETTINGS ───────────────────────────────────────────────────────────────
 function renderSettings() {
   const s = db.sett();
@@ -1485,7 +1856,7 @@ function saveSettings() {
 }
 
 function exportData() {
-  const data = {sessions: db.sessions(), settings: db.sett(), report: db.report(), exported: new Date().toISOString()};
+  const data = {sessions: db.sessions(), settings: db.sett(), report: db.report(), activities: db.activities(), stepsUploads: db.stepsUploads(), dailyLog: db.dailyLog(), exported: new Date().toISOString()};
   const a = document.createElement('a');
   a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
   a.download = 'workout-coach-backup.json';
@@ -1508,12 +1879,14 @@ function importData() {
         if(!confirm(`Import ${d.sessions.length} sessions? This will replace all current data.`)) return;
         db.saveSessions(d.sessions);
         if(d.settings) {
-          // Preserve current workerUrl and appToken — don't overwrite connection settings
           const current = db.sett();
           const imported = {...d.settings, workerUrl: current.workerUrl, appToken: current.appToken};
           db.saveSett(imported);
         }
         if(d.report) db.saveReport(d.report);
+        if(d.activities) db.saveActivities(d.activities);
+        if(d.stepsUploads) db.saveStepsUploads(d.stepsUploads);
+        if(d.dailyLog) db.saveDailyLog(d.dailyLog);
         toast(`Imported ${d.sessions.length} sessions ✓`);
         renderSettings();
         goTo('home');
