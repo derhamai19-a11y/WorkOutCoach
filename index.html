@@ -484,26 +484,38 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
   </div>
 </div>
 
-<!-- Custom activity overlay -->
+<!-- Activity overlay -->
 <div class="ov" id="ov-activity" onclick="closeSh('activity')"></div>
 <div class="sh" id="sh-activity">
   <div class="sh-handle"></div>
   <div class="sh-title">Log Activity</div>
+  <div style="padding:0 20px 12px">
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px">Quick Log</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      <button onclick="quickLogActivity('Spin','spin',45);closeSh('activity')" style="padding:12px;border-radius:var(--r-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:left">🚴 Spin <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">45 min</span></button>
+      <button onclick="quickLogActivity('Cricket','cricket',120);closeSh('activity')" style="padding:12px;border-radius:var(--r-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:left">🏏 Cricket <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">2 hours</span></button>
+      <button onclick="quickLogActivity('Run','run',30);closeSh('activity')" style="padding:12px;border-radius:var(--r-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:left">🏃 Run <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">30 min</span></button>
+      <button onclick="quickLogActivity('Walk','walk',45);closeSh('activity')" style="padding:12px;border-radius:var(--r-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:left">🚶 Walk <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">45 min</span></button>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px">Custom</div>
+  </div>
   <div class="fg-wrap">
     <label class="fl">Activity Name</label>
     <input class="fi" id="act-name" placeholder="e.g. Tennis, Cycling, Swimming" type="text">
   </div>
-  <div class="fg-wrap">
-    <label class="fl">Duration (minutes)</label>
-    <input class="fi" id="act-duration" type="number" inputmode="numeric" placeholder="e.g. 45">
-  </div>
-  <div class="fg-wrap">
-    <label class="fl">Date</label>
-    <input class="fi" id="act-date" type="date">
+  <div class="f2">
+    <div>
+      <label class="fl">Duration (min)</label>
+      <input class="fi" id="act-duration" type="number" inputmode="numeric" placeholder="45">
+    </div>
+    <div>
+      <label class="fl">Date</label>
+      <input class="fi" id="act-date" type="date">
+    </div>
   </div>
   <div class="fa-row">
     <button class="btn btn-s" onclick="closeSh('activity')">Cancel</button>
-    <button class="btn btn-p" onclick="saveCustomActivity()">Log Activity</button>
+    <button class="btn btn-p" onclick="saveCustomActivity()">Log</button>
   </div>
 </div>
 
@@ -1810,6 +1822,13 @@ function quickLogActivity(name, type, durationMins) {
   renderMetrics();
   renderRecentActivities();
   toast(`${name} logged — ~${kcal} kcal ✓`);
+}
+
+function openActivitySheet() {
+  $('act-name').value = '';
+  $('act-duration').value = '';
+  $('act-date').value = new Date().toISOString().slice(0,10);
+  openSh('activity');
 }
 
 function openCustomActivity() {
