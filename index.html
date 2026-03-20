@@ -240,18 +240,17 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
     </div>
     <div style="padding:0 20px;margin-bottom:20px" id="session-history-list"></div>
 
-    <!-- Activity log quick add -->
+    <!-- Activity log -->
     <div class="section-hdr">
       <span class="section-title">Log Activity</span>
     </div>
-    <div style="padding:0 20px 16px;margin-bottom:8px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Spin','spin',45)">🚴 Spin</button>
-      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Cricket','cricket',120)">🏏 Cricket</button>
-      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Run','run',30)">🏃 Run</button>
-      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Walk','walk',45)">🚶 Walk</button>
-      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:rgba(200,240,96,.1);border:1px solid rgba(200,240,96,.3);color:var(--accent);cursor:pointer;white-space:nowrap" onclick="openCustomActivity()">+ Custom</button>
+    <div style="padding:0 20px 16px">
+      <button onclick="openActivitySheet()" style="width:100%;padding:16px 18px;border-radius:var(--r);background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:space-between;text-align:left">
+        <span>⚡ Log spin, sport or activity</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
-    <div id="recent-activities" style="padding:0 20px;margin-bottom:calc(90px + env(safe-area-inset-bottom,0px))"></div>
+    <div id="recent-activities" style="padding:0 20px;margin-bottom:calc(100px + env(safe-area-inset-bottom,0px))"></div>
   </div>
 
   <!-- SESSION SCREEN -->
@@ -1856,25 +1855,42 @@ function saveCustomActivity() {
   toast(`${name} logged — ~${kcal} kcal ✓`);
 }
 
+function activityEmoji(name) {
+  const n = (name||'').toLowerCase();
+  if(n.includes('spin')||n.includes('cycl')||n.includes('bike')) return '🚴';
+  if(n.includes('cricket')) return '🏏';
+  if(n.includes('run')||n.includes('jog')) return '🏃';
+  if(n.includes('walk')) return '🚶';
+  if(n.includes('tennis')) return '🎾';
+  if(n.includes('swim')) return '🏊';
+  return '⚡';
+}
+
+function deleteActivity(id) {
+  db.saveActivities(db.activities().filter(a => a.id !== id));
+  recalcHistoricTDEE();
+  renderMetrics();
+  renderRecentActivities();
+  toast('Activity deleted');
+}
+
 function renderRecentActivities() {
   const el = $('recent-activities');
   if(!el) return;
-  const acts = db.activities().slice().reverse().slice(0, 5);
+  const acts = db.activities().slice().reverse().slice(0, 8);
   if(!acts.length) { el.innerHTML = ''; return; }
   el.innerHTML = acts.map(a => {
-    const emoji = a.name.toLowerCase().includes('spin') || a.name.toLowerCase().includes('cycl') ? '🚴'
-      : a.name.toLowerCase().includes('cricket') ? '🏏'
-      : a.name.toLowerCase().includes('run') ? '🏃'
-      : a.name.toLowerCase().includes('walk') ? '🚶' : '⚡';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:18px">${emoji}</span>
+        <span style="font-size:20px">${activityEmoji(a.name)}</span>
         <div>
-          <div style="font-size:13px;font-weight:500">${esc(a.name)}</div>
-          <div style="font-size:11px;color:var(--text3)">${fmtDate(a.date)} · ${a.durationMins}min</div>
+          <div style="font-size:14px;font-weight:500">${esc(a.name)}</div>
+          <div style="font-size:11px;color:var(--text3)">${fmtDate(a.date)} · ${a.durationMins}min · ~${a.kcal} kcal</div>
         </div>
       </div>
-      <div style="font-size:13px;color:var(--accent3)">~${a.kcal} kcal</div>
+      <button onclick="deleteActivity('${a.id}')" style="width:30px;height:30px;border-radius:8px;background:rgba(240,112,112,.1);border:1px solid rgba(240,112,112,.2);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>`;
   }).join('');
 }
