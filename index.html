@@ -244,14 +244,14 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
     <div class="section-hdr">
       <span class="section-title">Log Activity</span>
     </div>
-    <div style="padding:0 20px;margin-bottom:12px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px">
+    <div style="padding:0 20px 16px;margin-bottom:8px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
       <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Spin','spin',45)">🚴 Spin</button>
       <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Cricket','cricket',120)">🏏 Cricket</button>
       <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Run','run',30)">🏃 Run</button>
       <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Walk','walk',45)">🚶 Walk</button>
       <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:rgba(200,240,96,.1);border:1px solid rgba(200,240,96,.3);color:var(--accent);cursor:pointer;white-space:nowrap" onclick="openCustomActivity()">+ Custom</button>
     </div>
-    <div id="recent-activities" style="padding:0 20px;margin-bottom:30px"></div>
+    <div id="recent-activities" style="padding:0 20px;margin-bottom:calc(90px + env(safe-area-inset-bottom,0px))"></div>
   </div>
 
   <!-- SESSION SCREEN -->
