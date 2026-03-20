@@ -211,19 +211,6 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
       </div>
     </div>
 
-    <!-- Activity log quick add -->
-    <div class="section-hdr">
-      <span class="section-title">Log Activity</span>
-    </div>
-    <div style="padding:0 20px;margin-bottom:20px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch" id="activity-chips-wrap">
-      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Spin','spin',45)">🚴 Spin</button>
-      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Cricket','cricket',120)">🏏 Cricket</button>
-      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Run','run',30)">🏃 Run</button>
-      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Walk','walk',45)">🚶 Walk</button>
-      <button style="flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:rgba(200,240,96,.1);border:1px solid rgba(200,240,96,.3);color:var(--accent);cursor:pointer;white-space:nowrap" onclick="openCustomActivity()">+ Custom</button>
-    </div>
-    <div id="recent-activities" style="padding:0 20px;margin-bottom:16px"></div>
-
     <!-- Working weights -->
     <div class="section-hdr">
       <span class="section-title">Working Weights</span>
@@ -252,6 +239,19 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
       <span class="section-title">Session History</span>
     </div>
     <div style="padding:0 20px;margin-bottom:20px" id="session-history-list"></div>
+
+    <!-- Activity log quick add -->
+    <div class="section-hdr">
+      <span class="section-title">Log Activity</span>
+    </div>
+    <div style="padding:0 20px;margin-bottom:12px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px">
+      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Spin','spin',45)">🚴 Spin</button>
+      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Cricket','cricket',120)">🏏 Cricket</button>
+      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Run','run',30)">🏃 Run</button>
+      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap" onclick="quickLogActivity('Walk','walk',45)">🚶 Walk</button>
+      <button style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;background:rgba(200,240,96,.1);border:1px solid rgba(200,240,96,.3);color:var(--accent);cursor:pointer;white-space:nowrap" onclick="openCustomActivity()">+ Custom</button>
+    </div>
+    <div id="recent-activities" style="padding:0 20px;margin-bottom:30px"></div>
   </div>
 
   <!-- SESSION SCREEN -->
@@ -856,125 +856,152 @@ function setChartEx(ex) {
 function drawChart() {
   const canvas = $('progress-chart');
   if(!canvas) return;
-  // Force layout first
   const W = canvas.offsetWidth || 320;
-  const H = 160;
+  const H = 170;
   const dpr = window.devicePixelRatio || 1;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  ctx.clearRect(0,0,W,H);
+  ctx.clearRect(0, 0, W, H);
 
-  // Gather data points from all sessions for this exercise
+  // Gather data
   const sessions = db.sessions().slice().sort((a,b) => new Date(a.date) - new Date(b.date));
   const points = [];
   sessions.forEach(sess => {
     const sets = (sess.sets || []).filter(s => s.exercise === chartExercise);
     if(!sets.length) return;
     const maxWeight = Math.max(...sets.map(s => Number(s.weight) || 0));
-    const topSet = sets.reduce((best, s) => (!best || s.weight > best.weight) ? s : best, null);
+    const topSet = sets.reduce((best, s) => (!best || Number(s.weight) > Number(best.weight)) ? s : best, null);
     const topReps = topSet ? (Number(topSet.reps) || 0) : 0;
-    if(maxWeight > 0) points.push({date: new Date(sess.date), weight: maxWeight, reps: topReps});
+    if(maxWeight > 0) points.push({ date: new Date(sess.date), weight: maxWeight, reps: topReps });
   });
 
-  if(points.length < 1) {
+  if(!points.length) {
     ctx.fillStyle = 'rgba(144,144,168,0.4)';
     ctx.font = '13px DM Sans, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('No data yet for ' + chartExercise.split(' ')[0], W/2, H/2);
+    ctx.fillText('No data yet — complete a session first', W/2, H/2);
     return;
   }
 
-  if(points.length === 1) {
-    // Single point — show it
-    ctx.fillStyle = 'rgba(144,144,168,0.4)';
-    ctx.font = '12px DM Sans, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(points[0].weight + 'kg × ' + points[0].reps + ' reps', W/2, H/2 - 10);
-    ctx.fillText(points[0].date.toLocaleDateString('en-GB',{day:'numeric',month:'short'}), W/2, H/2 + 10);
-    return;
-  }
-
-  const PAD = {t:20,r:50,b:32,l:40};
+  const PAD = { t: 20, r: 44, b: 36, l: 44 };
   const cW = W - PAD.l - PAD.r;
   const cH = H - PAD.t - PAD.b;
+  const n = points.length;
 
   const weights = points.map(p => p.weight);
-  const reps = points.map(p => p.reps);
-  const minW = Math.min(...weights) - 2, maxW = Math.max(...weights) + 2;
-  const minR = Math.max(0, Math.min(...reps) - 2), maxR = Math.max(...reps) + 2;
+  const repsArr = points.map(p => p.reps);
+  const minW = Math.max(0, Math.min(...weights) - 4);
+  const maxW = Math.max(...weights) + 4;
+  const minR = Math.max(0, Math.min(...repsArr) - 2);
+  const maxR = Math.max(...repsArr) + 2;
 
-  const xStep = points.length > 1 ? cW / (points.length - 1) : cW;
-  const toX = i => PAD.l + i * xStep;
+  const barW = Math.max(8, Math.min(28, (cW / n) * 0.55));
+  const gap = cW / n;
+  const toX = i => PAD.l + gap * i + gap / 2;
   const toYw = w => PAD.t + cH - ((w - minW) / (maxW - minW || 1)) * cH;
   const toYr = r => PAD.t + cH - ((r - minR) / (maxR - minR || 1)) * cH;
 
-  // Grid
-  ctx.strokeStyle = 'rgba(42,42,58,0.6)';
+  // Grid lines
+  ctx.strokeStyle = 'rgba(42,42,58,0.7)';
   ctx.lineWidth = 1;
-  [0, 0.5, 1].forEach(f => {
+  [0, 0.33, 0.66, 1].forEach(f => {
     const y = PAD.t + cH * (1 - f);
     ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + cW, y); ctx.stroke();
   });
 
-  // Weight line (green)
-  const gradW = ctx.createLinearGradient(0, PAD.t, 0, PAD.t + cH);
-  gradW.addColorStop(0, 'rgba(200,240,96,0.2)');
-  gradW.addColorStop(1, 'rgba(200,240,96,0)');
-  ctx.beginPath();
-  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toYw(p.weight)) : ctx.lineTo(toX(i),toYw(p.weight)));
-  ctx.lineTo(toX(points.length-1), PAD.t+cH);
-  ctx.lineTo(toX(0), PAD.t+cH);
-  ctx.closePath(); ctx.fillStyle = gradW; ctx.fill();
-
-  ctx.beginPath();
-  ctx.strokeStyle = '#c8f060'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
-  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toYw(p.weight)) : ctx.lineTo(toX(i),toYw(p.weight)));
-  ctx.stroke();
-
-  // Reps line (blue, dashed)
-  ctx.beginPath();
-  ctx.strokeStyle = '#60c8f0'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
-  ctx.setLineDash([4,3]);
-  points.forEach((p,i) => i===0 ? ctx.moveTo(toX(i),toYr(p.reps)) : ctx.lineTo(toX(i),toYr(p.reps)));
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Dots — weight
-  points.forEach((p,i) => {
-    ctx.beginPath(); ctx.arc(toX(i), toYw(p.weight), 3, 0, Math.PI*2);
-    ctx.fillStyle = '#c8f060'; ctx.fill();
-  });
-  // Dots — reps
-  points.forEach((p,i) => {
-    ctx.beginPath(); ctx.arc(toX(i), toYr(p.reps), 3, 0, Math.PI*2);
-    ctx.fillStyle = '#60c8f0'; ctx.fill();
+  // Weight bars (green)
+  points.forEach((p, i) => {
+    const x = toX(i);
+    const barTop = toYw(p.weight);
+    const barBottom = PAD.t + cH;
+    const barHeight = barBottom - barTop;
+    const grad = ctx.createLinearGradient(0, barTop, 0, barBottom);
+    grad.addColorStop(0, 'rgba(200,240,96,0.85)');
+    grad.addColorStop(1, 'rgba(200,240,96,0.25)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x - barW/2, barTop, barW, barHeight, [3,3,0,0])
+      : ctx.rect(x - barW/2, barTop, barW, barHeight);
+    ctx.fill();
   });
 
-  // Y labels left (weight)
-  ctx.fillStyle = '#c8f060'; ctx.font = '10px DM Sans,sans-serif'; ctx.textAlign = 'right';
-  ctx.fillText(Math.round(minW+2)+'kg', PAD.l-4, toYw(minW+2)+3);
-  ctx.fillText(Math.round(maxW-2)+'kg', PAD.l-4, toYw(maxW-2)+3);
+  // Reps line (blue)
+  if(points.length > 1) {
+    ctx.beginPath();
+    ctx.strokeStyle = '#60c8f0';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    points.forEach((p, i) => {
+      i === 0 ? ctx.moveTo(toX(i), toYr(p.reps)) : ctx.lineTo(toX(i), toYr(p.reps));
+    });
+    ctx.stroke();
+  }
 
-  // Y labels right (reps)
-  ctx.fillStyle = '#60c8f0'; ctx.textAlign = 'left';
-  ctx.fillText(Math.round(minR+2)+'r', PAD.l+cW+4, toYr(minR+2)+3);
-  ctx.fillText(Math.round(maxR-2)+'r', PAD.l+cW+4, toYr(maxR-2)+3);
+  // Reps dots
+  points.forEach((p, i) => {
+    ctx.beginPath();
+    ctx.arc(toX(i), toYr(p.reps), 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#60c8f0';
+    ctx.fill();
+    ctx.strokeStyle = 'var(--bg)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
 
-  // X labels
-  ctx.fillStyle = 'rgba(144,144,168,0.6)'; ctx.textAlign = 'center';
-  const opts = {day:'numeric',month:'short'};
-  ctx.fillText(points[0].date.toLocaleDateString('en-GB',opts), toX(0), H-4);
-  if(points.length > 1) ctx.fillText(points[points.length-1].date.toLocaleDateString('en-GB',opts), toX(points.length-1), H-4);
+  // Weight value labels on bars (if few points)
+  if(n <= 6) {
+    ctx.fillStyle = 'rgba(200,240,96,0.9)';
+    ctx.font = 'bold 10px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    points.forEach((p, i) => {
+      ctx.fillText(p.weight + 'kg', toX(i), toYw(p.weight) - 4);
+    });
+  }
+
+  // Y axis left — weight
+  ctx.fillStyle = 'rgba(200,240,96,0.7)';
+  ctx.font = '10px DM Sans, sans-serif';
+  ctx.textAlign = 'right';
+  [minW + (maxW-minW)*0.1, maxW - (maxW-minW)*0.1].forEach(w => {
+    ctx.fillText(Math.round(w) + 'kg', PAD.l - 5, toYw(w) + 3);
+  });
+
+  // Y axis right — reps
+  ctx.fillStyle = 'rgba(96,200,240,0.7)';
+  ctx.textAlign = 'left';
+  [minR + (maxR-minR)*0.1, maxR - (maxR-minR)*0.1].forEach(r => {
+    ctx.fillText(Math.round(r) + 'r', PAD.l + cW + 5, toYr(r) + 3);
+  });
+
+  // X axis dates
+  ctx.fillStyle = 'rgba(144,144,168,0.6)';
+  ctx.textAlign = 'center';
+  ctx.font = '9px DM Sans, sans-serif';
+  const dateOpts = { day: 'numeric', month: 'short' };
+  if(n <= 8) {
+    points.forEach((p, i) => ctx.fillText(p.date.toLocaleDateString('en-GB', dateOpts), toX(i), H - 4));
+  } else {
+    // Show first, middle, last
+    [0, Math.floor(n/2), n-1].forEach(i => {
+      ctx.fillText(points[i].date.toLocaleDateString('en-GB', dateOpts), toX(i), H - 4);
+    });
+  }
 
   // Legend
-  ctx.fillStyle = '#c8f060'; ctx.textAlign = 'left'; ctx.font = '9px DM Sans,sans-serif';
-  ctx.fillText('── Weight', PAD.l, PAD.t - 6);
-  ctx.fillStyle = '#60c8f0';
-  ctx.fillText('- - Reps', PAD.l + 60, PAD.t - 6);
+  ctx.font = '9px DM Sans, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(200,240,96,0.8)';
+  ctx.fillRect(PAD.l, PAD.t - 14, 10, 8);
+  ctx.fillStyle = 'rgba(200,240,96,0.7)';
+  ctx.fillText('Weight', PAD.l + 13, PAD.t - 7);
+  ctx.strokeStyle = '#60c8f0'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(PAD.l + 65, PAD.t - 10); ctx.lineTo(PAD.l + 75, PAD.t - 10); ctx.stroke();
+  ctx.fillStyle = 'rgba(96,200,240,0.7)';
+  ctx.fillText('Reps', PAD.l + 78, PAD.t - 7);
 }
+
 
 // ── WEIGHTS SHEET ──────────────────────────────────────────────────────────
 function openWeightsSheet() {
