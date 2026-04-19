@@ -1351,17 +1351,36 @@ function updateWeightsFromSession() {
   if(!activeSession || !activeSession.sets.length) return;
   const s = db.sett();
   if(!s.weights) s.weights = JSON.parse(JSON.stringify(DEFAULT_WEIGHTS));
+  const eligible = new Set([...PUSH_EXERCISES, ...PULL_EXERCISES, ...ACCESSORY_POOL]);
   const exGroups = {};
   activeSession.sets.forEach(set => {
+    if(!eligible.has(set.exercise)) return;
+    if(set.rpe == null || set.rpe === undefined) return;
     if(!exGroups[set.exercise]) exGroups[set.exercise] = [];
     exGroups[set.exercise].push(set);
   });
   Object.entries(exGroups).forEach(([ex, sets]) => {
-    const maxWeight = Math.max(...sets.map(s=>s.weight));
-    const goodSets = sets.filter(s => s.weight === maxWeight && (!s.rpe || s.rpe <= 8.5));
-    if(goodSets.length >= 2 && s.weights[ex] && s.weights[ex].kg < maxWeight) {
-      s.weights[ex] = {kg: maxWeight, status: 'exposure'};
-    }
+    if(!s.weights[ex]) return;
+    const current = s.weights[ex];
+    sets.forEach(set => {
+      if(set.rpe > 8.5) return;
+      if(set.weight <= current.kg) {
+        // same weight, check if exposure can be promoted to working
+        if(current.status === 'exposure' && set.weight === current.kg && set.reps >= 12) {
+          s.weights[ex] = {kg: current.kg, status: 'working'};
+        }
+        return;
+      }
+      // set.weight > current.kg — potential update
+      if(set.reps >= 12) {
+        s.weights[ex] = {kg: set.weight, status: 'working'};
+      } else {
+        s.weights[ex] = {kg: set.weight, status: 'exposure'};
+      }
+      // re-read so chained sets within the same session build on each other
+      current.kg = s.weights[ex].kg;
+      current.status = s.weights[ex].status;
+    });
   });
   db.saveSett(s);
 }
