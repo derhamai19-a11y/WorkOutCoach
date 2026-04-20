@@ -203,6 +203,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 <div class="section-hdr"><span class="section-title">Log Activity</span></div>
 <div style="padding:0 20px 16px"><button onclick="openActivitySheet()" style="width:100%;padding:16px 18px;border-radius:var(--r);background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:space-between;text-align:left"><span>⚡ Log spin, sport or activity</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button></div>
 <div id="recent-activities" style="padding:0 20px;margin-bottom:calc(100px + env(safe-area-inset-bottom,0px))"></div>
+<div style="text-align:center; padding:10px; font-size:12px; color:var(--text3)">Version ${VERSION}</div>
 </div>
 <div id="session-screen" style="display:none;flex-direction:column;height:calc(100vh - calc(60px + env(safe-area-inset-bottom,0px)));position:fixed;top:0;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom,0px))">
 <div class="session-empty" id="session-start" style="padding-top:calc(40px + env(safe-area-inset-top,0px))">
@@ -314,6 +315,7 @@ const DAILY_KEY = 'wc_daily';
 const STEPS_KEY = 'wc_dailysteps';
 const ACTIVITY_KEY = 'wc_activities';
 const STREAK_BEST_KEY = 'wc_streakbest';
+const VERSION = '1.1';
 
 const DEFAULT_WEIGHTS = {
   'Bench Press': {working: 24, exposure: 26},
