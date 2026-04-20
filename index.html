@@ -203,7 +203,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 <div class="section-hdr"><span class="section-title">Log Activity</span></div>
 <div style="padding:0 20px 16px"><button onclick="openActivitySheet()" style="width:100%;padding:16px 18px;border-radius:var(--r);background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:space-between;text-align:left"><span>⚡ Log spin, sport or activity</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button></div>
 <div id="recent-activities" style="padding:0 20px;margin-bottom:calc(100px + env(safe-area-inset-bottom,0px))"></div>
-<div style="text-align:center; padding:10px; font-size:12px; color:var(--text3)">Version ${VERSION}</div>
+<div id="version-display" style="text-align:center; padding:10px; font-size:12px; color:var(--text3)"></div>
 </div>
 <div id="session-screen" style="display:none;flex-direction:column;height:calc(100vh - calc(60px + env(safe-area-inset-bottom,0px)));position:fixed;top:0;left:0;right:0;bottom:calc(60px + env(safe-area-inset-bottom,0px))">
 <div class="session-empty" id="session-start" style="padding-top:calc(40px + env(safe-area-inset-top,0px))">
@@ -715,6 +715,7 @@ function renderHome() {
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   $('home-subtitle').textContent = s.name ? `${greet}, ${s.name}` : greet;
+  $('version-display').textContent = `Version ${VERSION}`;
 }
 
 function setCalRange(n) {
@@ -777,13 +778,23 @@ function renderWeeklyScoreCard() {
   $('score-pills').innerHTML = pillsHtml;
 }
 
+function normaliseWeight(d) {
+  if(!d) return {working: '?', exposure: '?'};
+  if(d.working !== undefined) return d;
+  // migrate old {kg, status} format
+  const kg = d.kg || 0;
+  const inc = kg < 10 ? 1 : 2;
+  if(d.status === 'exposure') return {working: Math.max(0, kg - inc), exposure: kg};
+  return {working: kg, exposure: kg + inc};
+}
+
 function renderWeightsList() {
   const s = db.sett();
   const w = s.weights || DEFAULT_WEIGHTS;
   const primary = [...PUSH_EXERCISES, ...PULL_EXERCISES];
   let html = '';
   primary.forEach(ex => {
-    const d = w[ex] || {working: '?', exposure: '?'};
+    const d = normaliseWeight(w[ex]);
     html += `<div class="weight-row"><div><div class="weight-name">${ex}</div><div class="weight-status" style="color:var(--text3);text-align:left">Exposure: ${d.exposure}kg</div></div><div style="text-align:right"><div class="weight-val">Working Weight: ${d.working}kg</div></div></div>`;
   });
   $('weights-list').innerHTML = html;
@@ -965,8 +976,9 @@ function openWeightsSheet() {
   const allEx = [...PUSH_EXERCISES, ...PULL_EXERCISES, ...ACCESSORY_POOL];
   let html = '';
   allEx.forEach(ex => {
-    const d = w[ex] || {kg:0, status:'working'};
-    html += `<div class="fg-wrap"><label class="fl">${ex}</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input class="fi" id="w-${ex.replace(/ /g,'_')}" type="number" inputmode="decimal" value="${d.kg}" placeholder="kg"><select class="fi" id="ws-${ex.replace(/ /g,'_')}"><option value="working"${d.status==='working'?' selected':''}>Working</option><option value="exposure"${d.status==='exposure'?' selected':''}>Exposure</option><option value="estimated"${d.status==='estimated'?' selected':''}>Estimated</option></select></div></div>`;
+    const d = normaliseWeight(w[ex]);
+    const key = ex.replace(/ /g,'_');
+    html += `<div class="fg-wrap"><label class="fl">${ex}</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input class="fi" id="ww-${key}" type="number" inputmode="decimal" value="${d.working}" placeholder="Working kg"><input class="fi" id="we-${key}" type="number" inputmode="decimal" value="${d.exposure}" placeholder="Exposure kg"></div></div>`;
   });
   $('weights-form').innerHTML = html;
   openSh('weights');
@@ -978,9 +990,9 @@ function saveWeights() {
   const allEx = [...PUSH_EXERCISES, ...PULL_EXERCISES, ...ACCESSORY_POOL];
   allEx.forEach(ex => {
     const key = ex.replace(/ /g,'_');
-    const kgEl = $(`w-${key}`), stEl = $(`ws-${key}`);
-    if(kgEl) {
-      s.weights[ex] = { kg: parseFloat(kgEl.value) || 0, status: stEl ? stEl.value : 'working' };
+    const wEl = $(`ww-${key}`), eEl = $(`we-${key}`);
+    if(wEl) {
+      s.weights[ex] = { working: parseFloat(wEl.value) || 0, exposure: parseFloat(eEl ? eEl.value : 0) || 0 };
     }
   });
   db.saveSett(s);
@@ -1098,7 +1110,7 @@ function buildSystemPrompt(type, customName) {
   const w = s.weights || DEFAULT_WEIGHTS;
   const sessionMemory = buildSessionMemory();
   const feedbackThemes = summariseFeedbackThemes();
-  const weightsStr = Object.entries(w).map(([ex, d]) => `${ex}: working ${d.working}kg, exposure ${d.exposure}kg`).join(', ');
+  const weightsStr = Object.entries(w).map(([ex, d]) => { const n = normaliseWeight(d); return `${ex}: working ${n.working}kg, exposure ${n.exposure}kg`; }).join(', ');
   const feedbackBlock = feedbackThemes
     ? `\nATHLETE FEEDBACK PATTERNS (last 8 weeks):\n${feedbackThemes}\n\nUse this to calibrate. If avg coach rating is below 4, the athlete wants something different — push harder, vary more, listen to recent comments. If they consistently say "too easy" or "more variety", honour that.\n`
     : '';
@@ -1259,12 +1271,29 @@ function renderMarkdown(text) {
   return esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
 }
 
+function applyWeightUpdatesFromReply(text) {
+  const match = text.match(/WEIGHT_UPDATE_START\n([\s\S]*?)\nWEIGHT_UPDATE_END/);
+  if(!match) return;
+  const s = db.sett();
+  if(!s.weights) s.weights = JSON.parse(JSON.stringify(DEFAULT_WEIGHTS));
+  match[1].trim().split('\n').forEach(line => {
+    const m = line.match(/^(.+?)\s*\|\s*working:\s*([\d.]+)kg\s*\|\s*exposure:\s*([\d.]+)kg/);
+    if(!m) return;
+    const ex = m[1].trim();
+    s.weights[ex] = {working: parseFloat(m[2]), exposure: parseFloat(m[3])};
+  });
+  db.saveSett(s);
+  renderWeightsList();
+}
+
 function addCoachMessage(text) {
+  applyWeightUpdatesFromReply(text);
+  const displayText = text.replace(/\nWEIGHT_UPDATE_START[\s\S]*?WEIGHT_UPDATE_END/g, '').trim();
   chatHistory.push({role:'assistant', content: text});
   const area = $('chat-area');
   const div = document.createElement('div');
   div.className = 'msg coach';
-  div.innerHTML = `<div class="msg-bubble">${renderMarkdown(text)}</div><div class="msg-time">${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>`;
+  div.innerHTML = `<div class="msg-bubble">${renderMarkdown(displayText)}</div><div class="msg-time">${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>`;
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
 }
@@ -1406,26 +1435,19 @@ function updateWeightsFromSession() {
   });
   Object.entries(exGroups).forEach(([ex, sets]) => {
     if(!s.weights[ex]) return;
-    const current = s.weights[ex];
+    const current = normaliseWeight(s.weights[ex]);
     sets.forEach(set => {
       if(set.rpe > 8.5) return;
-      if(set.weight <= current.kg) {
-        // same weight, check if exposure can be promoted to working
-        if(current.status === 'exposure' && set.weight === current.kg && set.reps >= 12) {
-          s.weights[ex] = {kg: current.kg, status: 'working'};
-        }
-        return;
-      }
-      // set.weight > current.kg — potential update
+      const inc = set.weight < 10 ? 1 : 2;
+      if(set.weight <= current.working) return;
       if(set.reps >= 12) {
-        s.weights[ex] = {kg: set.weight, status: 'working'};
-      } else {
-        s.weights[ex] = {kg: set.weight, status: 'exposure'};
+        current.working = set.weight;
+        current.exposure = set.weight + inc;
+      } else if(set.weight > current.exposure) {
+        current.exposure = set.weight;
       }
-      // re-read so chained sets within the same session build on each other
-      current.kg = s.weights[ex].kg;
-      current.status = s.weights[ex].status;
     });
+    s.weights[ex] = {working: current.working, exposure: current.exposure};
   });
   db.saveSett(s);
 }
