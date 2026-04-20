@@ -795,7 +795,7 @@ function renderWeightsList() {
   let html = '';
   primary.forEach(ex => {
     const d = normaliseWeight(w[ex]);
-    html += `<div class="weight-row"><div><div class="weight-name">${ex}</div><div class="weight-status" style="color:var(--text3);text-align:left">Exposure: ${d.exposure}kg</div></div><div style="text-align:right"><div class="weight-val">Working Weight: ${d.working}kg</div></div></div>`;
+    html += `<div class="weight-row"><div><div class="weight-name">${ex}</div><div class="weight-status" style="color:var(--text3);text-align:left">Exposure: ${d.exposure}kg</div></div><div style="text-align:right"><div class="weight-val">Working: ${d.working}kg</div></div></div>`;
   });
   $('weights-list').innerHTML = html;
 }
