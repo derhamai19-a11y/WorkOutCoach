@@ -66,6 +66,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 .cal-dot.spin{background:rgba(96,240,160,.12);border-color:rgba(96,240,160,.35);color:var(--green)}
 .cal-dot.custom{background:rgba(160,96,240,.15);border-color:rgba(160,96,240,.4);color:var(--accent4)}
 .cal-dot.rest{background:var(--bg3);border-color:var(--border);color:var(--text3)}
+.cal-dot.actv{background:rgba(240,184,96,.12);border-color:rgba(240,184,96,.35);color:var(--amber)}
 .cal-dot.today{box-shadow:0 0 0 2px var(--accent)}
 .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px;margin-bottom:14px}
 .metric-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
@@ -215,7 +216,14 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 <button class="stype-btn power" onclick="startSession('power')"><span class="stype-icon">⚡</span>Power</button>
 <button class="stype-btn custom" onclick="openCustomSession()"><span class="stype-icon">🌀</span>Custom</button>
 </div>
+<div id="custom-template-btns" class="session-type-grid" style="margin-top:0"></div>
 <button onclick="openManualLog()" style="margin-top:8px;padding:10px 18px;border-radius:20px;background:transparent;border:1px solid var(--border);color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer">📝 Manual log past session</button>
+<datalist id="exercise-datalist">
+<option value="Bench Press"><option value="Shoulder Press"><option value="Tricep Press">
+<option value="One Arm Row"><option value="Rear Delt Flies"><option value="Bicep Curls">
+<option value="Hammer Curls"><option value="Incline Press"><option value="Lateral Raises">
+<option value="Double Arm Incline Row"><option value="Pectoral Fly"><option value="Pullover">
+</datalist>
 </div>
 <div class="active-session" id="session-chat" style="display:none">
 <div class="session-topbar" style="padding-top:calc(14px + env(safe-area-inset-top,0px))"><div><div class="session-title" id="session-title-bar">Push Session</div><div class="session-timer" id="session-timer">0:00</div></div><button class="end-session-btn" onclick="endSession()">End Session</button></div>
@@ -258,6 +266,8 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:12px">Step Targets</div>
 <div id="step-targets-form" style="margin-bottom:14px"></div>
 <button class="btn btn-s" style="width:100%;margin-bottom:24px" onclick="saveStepTargets()">Save Step Targets</button>
+<div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:12px">Session Templates</div>
+<button class="btn btn-s" style="width:100%;margin-bottom:24px" onclick="openTemplateManager()">Manage Session Templates</button>
 <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:12px">Data</div>
 <button class="btn btn-s" style="width:100%;margin-bottom:10px" onclick="exportCsvBundle()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSVs (for AI analysis)</button>
 <button class="btn btn-s" style="width:100%;margin-bottom:10px" onclick="exportData()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Backup (JSON)</button>
@@ -283,7 +293,13 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ece4;min-heigh
 <div class="fg-wrap"><label class="fl">Notes (optional)</label><input class="fi" id="manual-notes" placeholder="Any readiness notes…" type="text"></div>
 <div class="fa-row"><button class="btn btn-s" onclick="closeSh('manual')">Cancel</button><button class="btn btn-p" onclick="saveManualLog()">Save Session</button></div></div>
 <div class="ov" id="ov-sessdet" onclick="closeSh('sessdet')"></div>
-<div class="sh" id="sh-sessdet"><div class="sh-handle"></div><div class="sh-title" id="sessdet-title">Session</div><div style="padding:0 20px;margin-bottom:16px" id="sessdet-body"></div><div class="fa-row"><button class="btn btn-s" onclick="closeSh('sessdet')">Close</button><button class="btn btn-d" id="sessdet-del-btn">Delete Session</button></div></div>
+<div class="sh" id="sh-sessdet"><div class="sh-handle"></div><div class="sh-title" id="sessdet-title">Session</div><div style="padding:0 20px;margin-bottom:16px" id="sessdet-body"></div><div class="fa-row"><button class="btn btn-s" onclick="closeSh('sessdet')">Close</button><button class="btn btn-s" id="sessdet-edit-btn">Edit</button><button class="btn btn-d" id="sessdet-del-btn">Delete</button></div></div>
+<div class="ov" id="ov-tmgr" onclick="closeSh('tmgr')"></div>
+<div class="sh" id="sh-tmgr"><div class="sh-handle"></div><div class="sh-title">Session Templates</div><div id="tmgr-list" style="padding:0 20px;overflow-y:auto;max-height:55vh"></div><div class="fa-row"><button class="btn btn-s" onclick="closeSh('tmgr')">Close</button><button class="btn btn-p" onclick="openTemplateEditor(null)">+ New Template</button></div></div>
+<div class="ov" id="ov-tmpl" onclick="closeSh('tmpl')"></div>
+<div class="sh" id="sh-tmpl"><div class="sh-handle"></div><div class="sh-title" id="tmpl-title">New Template</div><input type="hidden" id="tmpl-id"><div style="padding:0 20px;overflow-y:auto;max-height:60vh"><div class="fg-wrap"><label class="fl">Template Name</label><input class="fi" id="tmpl-name" placeholder="e.g. Chest Focus, Upper Power" type="text"></div><div class="fg-wrap"><label class="fl">Base Type (for day tracking)</label><select class="fi" id="tmpl-type"><option value="push">Push</option><option value="pull">Pull</option><option value="power">Power</option><option value="custom">Custom</option></select></div><div class="fg-wrap"><label class="fl">Exercises</label><div id="tmpl-exercises"></div><button class="btn btn-s btn-sm" style="margin-top:8px;width:100%" onclick="addTemplateExercise()">+ Add Exercise</button></div><div class="fg-wrap"><label class="fl">Objectives</label><textarea class="fi fb-textarea" id="tmpl-objectives" placeholder="e.g. Prioritise chest volume, hit 3 sets at RPE 8" rows="2" style="min-height:52px"></textarea></div><div class="fg-wrap"><label class="fl">Constraints</label><textarea class="fi fb-textarea" id="tmpl-constraints" placeholder="e.g. Shoulder press light (RPE 7 max), 45 min cap" rows="2" style="min-height:52px"></textarea></div></div><div class="fa-row" style="flex-wrap:wrap"><button class="btn btn-s" style="flex:1" onclick="closeSh('tmpl')">Cancel</button><button class="btn btn-d" id="tmpl-del-btn" style="display:none;flex:0 0 auto" onclick="deleteTemplateConfirm()">Delete</button><button class="btn btn-p" style="flex:1" onclick="saveTemplate()">Save</button></div></div>
+<div class="ov" id="ov-sessedit" onclick="closeSh('sessedit')"></div>
+<div class="sh" id="sh-sessedit"><div class="sh-handle"></div><div class="sh-title">Edit Session</div><input type="hidden" id="sessedit-id"><div style="padding:0 20px;overflow-y:auto;max-height:62vh"><div class="fg-wrap"><label class="fl">Session Type</label><select class="fi" id="sessedit-type"><option value="push">Push</option><option value="pull">Pull</option><option value="power">Power</option><option value="custom">Custom</option></select></div><div class="fg-wrap"><label class="fl">Custom Name (if custom)</label><input class="fi" id="sessedit-custom-name" placeholder="e.g. Power Complex" type="text"></div><div class="fg-wrap"><label class="fl">Date</label><input class="fi" id="sessedit-date" type="date"></div><div class="fg-wrap"><label class="fl">Sets</label><div id="sessedit-sets"></div><button class="btn btn-s btn-sm" style="margin-top:8px;width:100%" onclick="addEditSet()">+ Add Set</button></div><div class="fg-wrap"><label class="fl">Session Intensity (1-10)</label><div style="display:flex;align-items:center;gap:12px"><input type="range" class="intensity-slider" id="sessedit-intensity" min="1" max="10" value="7" oninput="$('sessedit-int-val').textContent=this.value+'/10'" style="flex:1"><span id="sessedit-int-val" style="font-size:14px;color:var(--text2);min-width:40px">7/10</span></div></div><div class="fg-wrap"><label class="fl">Performance Note (optional)</label><input class="fi" id="sessedit-perf-note" placeholder="e.g. Hit a PB on bench, felt strong" type="text"></div></div><div class="fa-row"><button class="btn btn-s" onclick="closeSh('sessedit')">Cancel</button><button class="btn btn-p" onclick="saveSessionEdit()">Save</button></div></div>
 <div class="ov" id="ov-dsteps" onclick="closeSh('dsteps')"></div>
 <div class="sh" id="sh-dsteps"><div class="sh-handle"></div><div class="sh-title">Daily Steps</div><div style="padding:0 20px 8px;color:var(--text2);font-size:13px;line-height:1.5">Type yesterday's count this morning. Tap any day to edit.</div><div style="padding:14px 20px 0" id="dsteps-list"></div><div class="fa-row"><button class="btn btn-s" onclick="closeSh('dsteps')">Close</button><button class="btn btn-p" onclick="saveDailySteps()">Save Steps</button></div></div>
 <div class="ov" id="ov-activity" onclick="closeSh('activity')"></div>
@@ -315,7 +331,8 @@ const DAILY_KEY = 'wc_daily';
 const STEPS_KEY = 'wc_dailysteps';
 const ACTIVITY_KEY = 'wc_activities';
 const STREAK_BEST_KEY = 'wc_streakbest';
-const VERSION = '1.1';
+const TEMPLATES_KEY = 'wc_templates';
+const VERSION = '1.2';
 
 const DEFAULT_WEIGHTS = {
   'Bench Press': {working: 24, exposure: 26},
@@ -338,16 +355,18 @@ const ACCESSORY_POOL = ['Hammer Curls', 'Incline Press', 'Lateral Raises', 'Doub
 const DEFAULT_STEP_TARGETS = {
   push:  {min: 8000,  ideal: [8000, 10000]},
   spin:  {min: 8000,  ideal: [8000, 10000]},
+  actv:  {min: 8000,  ideal: [8000, 10000]},
   pull:  {min: 10000, ideal: [10000, 12000]},
   power: {min: 10000, ideal: [10000, 12000]},
   rest:  {min: 12000, ideal: [12000, 14000]}
 };
 const DAY_TYPE_META = {
-  push:  {label: 'Push',  emoji: '💪'},
-  pull:  {label: 'Pull',  emoji: '🔄'},
-  power: {label: 'Power', emoji: '⚡'},
-  spin:  {label: 'Spin',  emoji: '🚴'},
-  rest:  {label: 'Rest',  emoji: '😌'}
+  push:  {label: 'Push',   emoji: '💪'},
+  pull:  {label: 'Pull',   emoji: '🔄'},
+  power: {label: 'Power',  emoji: '⚡'},
+  spin:  {label: 'Spin',   emoji: '🚴'},
+  actv:  {label: 'Active', emoji: '🏃'},
+  rest:  {label: 'Rest',   emoji: '😌'}
 };
 const STEP_GRACE = 100;
 const ACTIVITY_METS = {
@@ -408,7 +427,9 @@ const db = {
   saveActivities(a) { localStorage.setItem(ACTIVITY_KEY, JSON.stringify(a)); },
   addActivity(a) { const all = db.activities(); all.push(a); db.saveActivities(all); },
   streakBests() { try { return JSON.parse(localStorage.getItem(STREAK_BEST_KEY) || '{}'); } catch(e) { return {}; } },
-  saveStreakBests(b) { localStorage.setItem(STREAK_BEST_KEY, JSON.stringify(b)); }
+  saveStreakBests(b) { localStorage.setItem(STREAK_BEST_KEY, JSON.stringify(b)); },
+  templates() { try { return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]'); } catch(e) { return []; } },
+  saveTemplates(t) { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(t)); }
 };
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
@@ -456,11 +477,12 @@ function getDayType(dateStr) {
   const activities = db.activities().filter(a => isoDate(a.date) === target);
   const sessionTypes = new Set(sessions.map(s => s.sessionType));
   const hasSpin = activities.some(a => /spin|cycl|bike/i.test(a.name || ''));
-  // Lowest step target wins (you've trained, fewer steps needed)
+  const hasActiveActivity = activities.some(a => !/walk/i.test(a.name || ''));
   if (sessionTypes.has('push')) return 'push';
   if (hasSpin) return 'spin';
   if (sessionTypes.has('pull')) return 'pull';
   if (sessionTypes.has('power')) return 'power';
+  if (hasActiveActivity) return 'actv';
   return 'rest';
 }
 
@@ -740,8 +762,13 @@ function renderCalendar() {
     const meta = DAY_TYPE_META[type] || DAY_TYPE_META.rest;
     const label = days === 7 ? DAY_LABELS[d.getDay()] : d.getDate();
     const todayClass = isToday ? ' today' : '';
-    const emoji = type === 'rest' ? '' : meta.emoji;
-    html += `<div class="cal-day" onclick="openDailyStepsSheet('${ds}')"><span class="cal-label">${label}</span><div class="cal-dot ${type}${todayClass}">${emoji}</div></div>`;
+    let dotClass = type;
+    let emoji = type === 'rest' ? '' : meta.emoji;
+    if (type === 'actv' || type === 'rest') {
+      const actEmoji = getTopActivityEmojiForDay(ds);
+      if (actEmoji) { dotClass = 'actv'; emoji = actEmoji; }
+    }
+    html += `<div class="cal-day" onclick="openDailyStepsSheet('${ds}')"><span class="cal-label">${label}</span><div class="cal-dot ${dotClass}${todayClass}">${emoji}</div></div>`;
   }
   grid.innerHTML = html;
 }
@@ -1011,6 +1038,25 @@ let pendingFeedbackSessionId = null;
 function renderSessionStart() {
   $('session-start').style.display = 'flex';
   $('session-chat').style.display = 'none';
+  renderTemplateButtons();
+}
+
+function renderTemplateButtons() {
+  const container = $('custom-template-btns');
+  if (!container) return;
+  const tmpls = db.templates();
+  if (!tmpls.length) { container.style.display = 'none'; return; }
+  container.style.display = 'grid';
+  container.innerHTML = tmpls.map(t => {
+    const meta = DAY_TYPE_META[t.baseType] || {emoji: '🌀'};
+    return `<button class="stype-btn ${t.baseType}" onclick="startSessionFromTemplate('${t.id}')"><span class="stype-icon">${meta.emoji}</span>${esc(t.name)}</button>`;
+  }).join('');
+}
+
+function startSessionFromTemplate(id) {
+  const t = db.templates().find(t => t.id === id);
+  if (!t) return;
+  startSession(t.baseType, t.name, t);
 }
 
 function openCustomSession() { openSh('custom'); $('custom-name').value = ''; setTimeout(()=>$('custom-name').focus(),400); }
@@ -1022,7 +1068,7 @@ function startCustomSession() {
   startSession('custom', name);
 }
 
-async function startSession(type, customName = '') {
+async function startSession(type, customName = '', template = null) {
   activeSession = {
     id: genId(), sessionType: type, customName: customName,
     date: new Date().toISOString(), sets: [], readinessNotes: ''
@@ -1042,7 +1088,7 @@ async function startSession(type, customName = '') {
   }, 1000);
   $('chat-area').innerHTML = '';
   showTyping();
-  const systemPrompt = buildSystemPrompt(type, customName);
+  const systemPrompt = buildSystemPrompt(type, customName, template);
   const openingMsg = type === 'push' ? 'Starting a push session. Plan it out for me.'
     : type === 'pull' ? 'Starting a pull session. Plan it out for me.'
     : type === 'power' ? 'Starting a power session. Plan it out for me.'
@@ -1105,7 +1151,7 @@ function summariseFeedbackThemes() {
   return summary || null;
 }
 
-function buildSystemPrompt(type, customName) {
+function buildSystemPrompt(type, customName, template = null) {
   const s = db.sett();
   const w = s.weights || DEFAULT_WEIGHTS;
   const sessionMemory = buildSessionMemory();
@@ -1206,7 +1252,7 @@ COACHING RULES:
 - Confirm every logged set, interpret performance, recommend next set
 - ALWAYS specify weight (kg), target reps, AND target RPE for every set
 - Adapt immediately and without hesitation to any live feedback: fatigue, injury, feeling strong, time pressure — adjust the plan on the fly
-- Today's session: ${type}${customName ? ' ('+customName+')' : ''}
+- Today's session: ${type}${customName ? ' ('+customName+')' : ''}${template ? '\n\nCUSTOM TEMPLATE: "' + template.name + '"\n' + ((template.exercises||[]).length ? 'Exercises:\n' + (template.exercises||[]).map(e => '- ' + e.name + ': ' + (e.sets||3) + ' sets, ' + (e.reps||'8-12') + ' reps, RPE ' + (e.rpe||'7-8')).join('\n') + '\n' : '') + (template.objectives ? 'Objectives: ' + template.objectives + '\n' : '') + (template.constraints ? 'Constraints: ' + template.constraints + '\n' : '') + 'Honour this template structure while applying all standard coaching rules above.' : ''}
 
 TONE & FORMAT — CRITICAL:
 You are a knowledgeable training partner. Direct, punchy, no fluff.
@@ -1563,7 +1609,7 @@ function saveManualLog() {
   if(!sets.length) { toast('Add at least one set'); return; }
   db.addSession({
     id: genId(), sessionType: type, customName,
-    date: new Date(date).toISOString(),
+    date: date + 'T12:00:00',
     sets, readinessNotes: notes,
     summary: 'Manually logged session', durationMs: 0,
     feedback: null
@@ -1607,9 +1653,11 @@ function openSessionDetail(id) {
     const stars = n => '★'.repeat(n || 0) + '☆'.repeat(5 - (n || 0));
     fbHtml = `<div style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:var(--r-sm)"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Feedback</div>${f.coachRating ? `<div style="font-size:12px;color:var(--text2);margin-bottom:4px">Coach: <span style="color:var(--amber)">${stars(f.coachRating)}</span>${f.coachComment ? ' · "' + esc(f.coachComment) + '"' : ''}</div>` : ''}${f.performanceRating ? `<div style="font-size:12px;color:var(--text2);margin-bottom:4px">Performance: <span style="color:var(--amber)">${stars(f.performanceRating)}</span>${f.performanceComment ? ' · "' + esc(f.performanceComment) + '"' : ''}</div>` : ''}${f.intensity ? `<div style="font-size:12px;color:var(--text2)">Intensity: ${f.intensity}/10</div>` : ''}</div>`;
   }
+  const reprocBtn = `<button onclick="reprocessSession('${id}')" style="margin-top:14px;padding:9px 14px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text3);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;width:100%;text-align:center">↻ Reprocess weights &amp; TDEE from this session</button>`;
   $('sessdet-body').innerHTML = setsHtml +
-    (sess.summary ? `<div style="font-size:13px;color:var(--text2);line-height:1.5;background:var(--bg3);border-radius:var(--r-sm);padding:12px;margin-top:12px">${esc(sess.summary)}</div>` : '') + fbHtml;
+    (sess.summary ? `<div style="font-size:13px;color:var(--text2);line-height:1.5;background:var(--bg3);border-radius:var(--r-sm);padding:12px;margin-top:12px">${esc(sess.summary)}</div>` : '') + fbHtml + reprocBtn;
   $('sessdet-del-btn').onclick = () => deleteSession(id);
+  $('sessdet-edit-btn').onclick = () => openSessionEdit(id);
   openSh('sessdet');
 }
 
@@ -1620,6 +1668,96 @@ function deleteSession(id) {
   toast('Session deleted');
   renderHome();
 }
+// ── SESSION EDIT & REPROCESS ──────────────────────────────────────────────
+let editSets = [];
+
+function openSessionEdit(id) {
+  const sess = db.sessions().find(s => s.id === id);
+  if (!sess) return;
+  editSets = [];
+  $('sessedit-id').value = id;
+  $('sessedit-type').value = sess.sessionType || 'push';
+  $('sessedit-custom-name').value = sess.customName || '';
+  $('sessedit-date').value = isoDate(sess.date);
+  const fb = sess.feedback || {};
+  const intensity = fb.intensity || 7;
+  $('sessedit-intensity').value = intensity;
+  $('sessedit-int-val').textContent = intensity + '/10';
+  $('sessedit-perf-note').value = fb.performanceComment || '';
+  $('sessedit-sets').innerHTML = '';
+  (sess.sets || []).forEach(s => addEditSet(s));
+  if (!editSets.length) addEditSet();
+  closeSh('sessdet');
+  setTimeout(() => openSh('sessedit'), 330);
+}
+
+function addEditSet(existing) {
+  const idx = editSets.length;
+  editSets.push({});
+  const allEx = [...PUSH_EXERCISES, ...PULL_EXERCISES, ...ACCESSORY_POOL];
+  if (existing && existing.exercise && !allEx.includes(existing.exercise)) allEx.unshift(existing.exercise);
+  const opts = allEx.map(ex => `<option${existing && existing.exercise === ex ? ' selected' : ''}>${esc(ex)}</option>`).join('');
+  const row = document.createElement('div');
+  row.className = 'manual-set-row';
+  row.id = `eset-${idx}`;
+  row.innerHTML = `<select class="fi" id="es-ex-${idx}" style="flex:2;font-size:13px;padding:10px">${opts}</select><input class="fi" id="es-w-${idx}" type="number" inputmode="decimal" placeholder="kg" value="${existing ? existing.weight || '' : ''}" style="flex:0 0 66px;font-size:13px;padding:10px"><input class="fi" id="es-r-${idx}" type="number" inputmode="numeric" placeholder="reps" value="${existing ? existing.reps || '' : ''}" style="flex:0 0 66px;font-size:13px;padding:10px"><input class="fi" id="es-rpe-${idx}" type="number" inputmode="decimal" placeholder="RPE" min="1" max="10" step="0.5" value="${existing ? existing.rpe || '' : ''}" style="flex:0 0 62px;font-size:13px;padding:10px"><button class="set-del-btn" onclick="removeEditSet(${idx})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  $('sessedit-sets').appendChild(row);
+}
+
+function removeEditSet(idx) { const el = $(`eset-${idx}`); if (el) el.remove(); }
+
+function saveSessionEdit() {
+  const id = $('sessedit-id').value;
+  if (!id) return;
+  const dateStr = $('sessedit-date').value;
+  if (!dateStr) { toast('Enter a date'); return; }
+  const sets = [];
+  editSets.forEach((_, idx) => {
+    const exEl = $(`es-ex-${idx}`);
+    if (!exEl) return;
+    const w = parseFloat($(`es-w-${idx}`)?.value);
+    if (!w) return;
+    sets.push({
+      exercise: exEl.value, weight: w,
+      reps: parseInt($(`es-r-${idx}`)?.value) || 0,
+      rpe: parseFloat($(`es-rpe-${idx}`)?.value) || null,
+      setNumber: sets.filter(s => s.exercise === exEl.value).length + 1
+    });
+  });
+  if (!sets.length) { toast('Add at least one set'); return; }
+  const sess = db.sessions().find(s => s.id === id);
+  const intensity = parseInt($('sessedit-intensity').value) || null;
+  const perfNote = $('sessedit-perf-note').value.trim() || null;
+  const existingFb = sess?.feedback || null;
+  const feedback = existingFb
+    ? {...existingFb, intensity, performanceComment: perfNote || existingFb.performanceComment}
+    : (intensity ? {intensity, performanceComment: perfNote, submittedAt: new Date().toISOString()} : null);
+  db.updateSession(id, {
+    sessionType: $('sessedit-type').value,
+    customName: $('sessedit-custom-name').value.trim(),
+    date: dateStr + 'T12:00:00',
+    sets,
+    feedback
+  });
+  recalcHistoricTDEE();
+  closeSh('sessedit');
+  toast('Session updated');
+  renderHome();
+}
+
+function reprocessSession(id) {
+  const sess = db.sessions().find(s => s.id === id);
+  if (!sess) return;
+  const prev = activeSession;
+  activeSession = sess;
+  updateWeightsFromSession();
+  activeSession = prev;
+  calcDailyTDEE(isoDate(sess.date));
+  closeSh('sessdet');
+  toast('Weights reprocessed from this session');
+  renderHome();
+}
+
 // ── DAILY STEPS ───────────────────────────────────────────────────────────
 function openDailyStepsSheet(focusDate) {
   renderDailyStepsList();
@@ -1706,13 +1844,20 @@ function saveCustomActivity() {
   const kcal = activityToKcal({name, durationMins: duration, intensity}, s.weight);
   db.addActivity({
     id: genId(),
-    date: date ? new Date(date).toISOString() : new Date().toISOString(),
+    date: date ? date + 'T12:00:00' : new Date().toISOString(),
     name, durationMins: duration, intensity, kcal
   });
   recalcHistoricTDEE();
   closeSh('activity');
   if (curScreen === 'home') { renderMetrics(); renderRecentActivities(); renderWeeklyScoreCard(); renderCalendar(); }
   toast(`${name} logged — ~${kcal} kcal ✓`);
+}
+
+function getTopActivityEmojiForDay(dateStr) {
+  const acts = db.activities().filter(a => isoDate(a.date) === dateStr);
+  if (!acts.length) return null;
+  const top = acts.slice().sort((a, b) => (b.kcal || 0) - (a.kcal || 0))[0];
+  return activityEmoji(top.name);
 }
 
 function activityEmoji(name) {
@@ -1744,6 +1889,118 @@ function renderRecentActivities() {
     const intLabel = a.intensity ? ` · I${a.intensity}/10` : '';
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">${activityEmoji(a.name)}</span><div><div style="font-size:14px;font-weight:500">${esc(a.name)}</div><div style="font-size:11px;color:var(--text3)">${fmtDate(a.date)} · ${a.durationMins}min${intLabel} · ~${a.kcal} kcal</div></div></div><button onclick="deleteActivity('${a.id}')" style="width:30px;height:30px;border-radius:8px;background:rgba(240,112,112,.1);border:1px solid rgba(240,112,112,.2);color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`;
   }).join('');
+}
+
+// ── SESSION TEMPLATES ─────────────────────────────────────────────────────
+let tmplExercises = [];
+let editingTemplateId = null;
+
+function openTemplateManager() {
+  renderTemplateList();
+  openSh('tmgr');
+}
+
+function renderTemplateList() {
+  const tmpls = db.templates();
+  const el = $('tmgr-list');
+  if (!tmpls.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px 0;text-align:center">No templates yet. Create one to customise your sessions with specific exercises, objectives and constraints.</div>';
+    return;
+  }
+  el.innerHTML = tmpls.map(t => {
+    const meta = DAY_TYPE_META[t.baseType] || {emoji: '🌀'};
+    const exCount = (t.exercises || []).length;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${meta.emoji}</div><div><div style="font-size:14px;font-weight:500">${esc(t.name)}</div><div style="font-size:11px;color:var(--text3)">${meta.label} · ${exCount} exercise${exCount !== 1 ? 's' : ''}</div></div></div><button onclick="openTemplateEditor('${t.id}')" style="padding:6px 14px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">Edit</button></div>`;
+  }).join('');
+}
+
+function openTemplateEditor(id) {
+  editingTemplateId = id;
+  tmplExercises = [];
+  $('tmpl-exercises').innerHTML = '';
+  if (id) {
+    const t = db.templates().find(t => t.id === id);
+    if (!t) return;
+    $('tmpl-title').textContent = 'Edit Template';
+    $('tmpl-id').value = id;
+    $('tmpl-name').value = t.name || '';
+    $('tmpl-type').value = t.baseType || 'push';
+    $('tmpl-objectives').value = t.objectives || '';
+    $('tmpl-constraints').value = t.constraints || '';
+    $('tmpl-del-btn').style.display = '';
+    (t.exercises || []).forEach(ex => addTemplateExercise(ex));
+    if (!tmplExercises.length) addTemplateExercise();
+  } else {
+    $('tmpl-title').textContent = 'New Template';
+    $('tmpl-id').value = '';
+    $('tmpl-name').value = '';
+    $('tmpl-type').value = 'push';
+    $('tmpl-objectives').value = '';
+    $('tmpl-constraints').value = '';
+    $('tmpl-del-btn').style.display = 'none';
+    addTemplateExercise();
+  }
+  if ($('sh-tmgr').classList.contains('open')) {
+    closeSh('tmgr');
+    setTimeout(() => openSh('tmpl'), 330);
+  } else {
+    openSh('tmpl');
+  }
+}
+
+function addTemplateExercise(existing) {
+  const idx = tmplExercises.length;
+  tmplExercises.push({});
+  const row = document.createElement('div');
+  row.className = 'manual-set-row';
+  row.id = `tex-${idx}`;
+  row.innerHTML = `<input class="fi" list="exercise-datalist" id="tex-n-${idx}" type="text" placeholder="Exercise" value="${esc(existing ? existing.name || '' : '')}" style="flex:2;font-size:13px;padding:10px"><input class="fi" id="tex-s-${idx}" type="number" inputmode="numeric" placeholder="sets" value="${existing ? existing.sets || '' : ''}" style="flex:0 0 54px;font-size:13px;padding:10px"><input class="fi" id="tex-r-${idx}" type="text" placeholder="reps" value="${existing ? existing.reps || '' : ''}" style="flex:0 0 62px;font-size:13px;padding:10px"><input class="fi" id="tex-e-${idx}" type="text" placeholder="RPE" value="${existing ? existing.rpe || '' : ''}" style="flex:0 0 54px;font-size:13px;padding:10px"><button class="set-del-btn" onclick="removeTemplateExercise(${idx})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+  $('tmpl-exercises').appendChild(row);
+}
+
+function removeTemplateExercise(idx) { const el = $(`tex-${idx}`); if (el) el.remove(); }
+
+function saveTemplate() {
+  const name = $('tmpl-name').value.trim();
+  if (!name) { toast('Enter a template name'); return; }
+  const exercises = [];
+  tmplExercises.forEach((_, idx) => {
+    const n = $(`tex-n-${idx}`);
+    if (!n) return;
+    const nm = n.value.trim();
+    if (!nm) return;
+    exercises.push({
+      name: nm,
+      sets: parseInt($(`tex-s-${idx}`)?.value) || 3,
+      reps: $(`tex-r-${idx}`)?.value.trim() || '8-12',
+      rpe: $(`tex-e-${idx}`)?.value.trim() || '7-8'
+    });
+  });
+  const tmpl = {
+    id: editingTemplateId || genId(),
+    name,
+    baseType: $('tmpl-type').value,
+    exercises,
+    objectives: $('tmpl-objectives').value.trim(),
+    constraints: $('tmpl-constraints').value.trim()
+  };
+  const all = db.templates();
+  const idx = all.findIndex(t => t.id === tmpl.id);
+  if (idx >= 0) all[idx] = tmpl; else all.push(tmpl);
+  db.saveTemplates(all);
+  closeSh('tmpl');
+  toast(`Template "${name}" saved`);
+  if (curScreen === 'session' && !activeSession) renderSessionStart();
+}
+
+function deleteTemplateConfirm() {
+  if (!editingTemplateId) return;
+  const t = db.templates().find(t => t.id === editingTemplateId);
+  if (!t || !confirm(`Delete template "${t.name}"?`)) return;
+  db.saveTemplates(db.templates().filter(t => t.id !== editingTemplateId));
+  closeSh('tmpl');
+  toast('Template deleted');
+  if (curScreen === 'session' && !activeSession) renderSessionStart();
 }
 
 // ── STREAKS SCREEN ────────────────────────────────────────────────────────
@@ -1834,9 +2091,9 @@ function renderSettings() {
 function renderStepTargetsForm() {
   const targets = db.sett().stepTargets;
   let html = '';
-  ['push','spin','pull','power','rest'].forEach(t => {
+  ['push','spin','actv','pull','power','rest'].forEach(t => {
     const meta = DAY_TYPE_META[t];
-    const tgt = targets[t];
+    const tgt = targets[t] || DEFAULT_STEP_TARGETS[t];
     html += `<div style="margin-bottom:14px"><label class="fl">${meta.emoji} ${meta.label}</label><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><input class="fi" id="st-${t}-min" type="number" inputmode="numeric" value="${tgt.min}" placeholder="Min"><input class="fi" id="st-${t}-lo" type="number" inputmode="numeric" value="${tgt.ideal[0]}" placeholder="Ideal lo"><input class="fi" id="st-${t}-hi" type="number" inputmode="numeric" value="${tgt.ideal[1]}" placeholder="Ideal hi"></div></div>`;
   });
   $('step-targets-form').innerHTML = html;
@@ -1844,7 +2101,7 @@ function renderStepTargetsForm() {
 
 function saveStepTargets() {
   const s = db.sett();
-  ['push','spin','pull','power','rest'].forEach(t => {
+  ['push','spin','actv','pull','power','rest'].forEach(t => {
     const min = parseInt($(`st-${t}-min`).value) || DEFAULT_STEP_TARGETS[t].min;
     const lo = parseInt($(`st-${t}-lo`).value) || DEFAULT_STEP_TARGETS[t].ideal[0];
     const hi = parseInt($(`st-${t}-hi`).value) || DEFAULT_STEP_TARGETS[t].ideal[1];
